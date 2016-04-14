@@ -20,7 +20,7 @@ class TestHttpServletRequest(private val url: String) : HttpServletRequest {
     }
 
     override fun getRequestURL(): StringBuffer? {
-        return StringBuffer().apply { append(url) }
+        return StringBuffer().apply { append(url.split("?").first()) }
     }
 
     override fun login(username: String?, password: String?) {
@@ -276,7 +276,7 @@ class TestHttpServletRequest(private val url: String) : HttpServletRequest {
     }
 
     override fun getParameter(name: String?): String? {
-        throw UnsupportedOperationException()
+        return url.split("?").last().split("&").map { val (k, v) = it.split("="); k to v }.toMap()[name]
     }
 
     override fun getRemotePort(): Int {

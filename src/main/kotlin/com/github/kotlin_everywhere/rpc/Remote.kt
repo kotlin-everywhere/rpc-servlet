@@ -4,11 +4,31 @@ import com.google.gson.GsonBuilder
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
-class Endpoint<R>(internal val url: String) {
-    internal var handler: (() -> R)? = null
+sealed class BaseEndpoint(internal val url: String) {
+    class Endpoint<R>(url: String) : BaseEndpoint(url) {
+        internal lateinit var handler: (() -> R)
 
-    operator fun invoke(handler: () -> R) {
-        this.handler = handler
+        operator fun invoke(handler: () -> R) {
+            this.handler = handler
+        }
+
+        fun <P> withParam(): EndpointWithParam<R, P> {
+            return EndpointWithParam(url)
+        }
+    }
+
+    class EndpointWithParam<R, P>(url: String) : BaseEndpoint(url) {
+        lateinit internal var handler: ((P) -> R)
+        lateinit private var clazz: Class<out P>
+
+        operator fun invoke(clazz: Class<out P>, handler: (P) -> R) {
+            this.clazz = clazz
+            this.handler = handler
+        }
+
+        internal fun handle(data: String?): R {
+            return handler(gson.fromJson(data, clazz))
+        }
     }
 }
 
@@ -19,9 +39,7 @@ infix fun Class<*>.isExtend(clazz: Class<*>): Boolean {
 internal val gson = GsonBuilder().create()
 
 abstract class Remote {
-    fun <R> get(url: String): Endpoint<R> {
-        return Endpoint(url)
-    }
+
 
     val client: TestClient
         get() = TestClient(this)
@@ -32,16 +50,22 @@ abstract class Remote {
                 .filter { it.parameterCount == 0 }
                 .filter { it.name.startsWith("get") && it.name.length > 3 }
                 .filter {
-                    it.returnType isExtend Endpoint::class.java
+                    it.returnType isExtend BaseEndpoint::class.java
                 }
-                .map { it(this) as Endpoint<*> }
+                .map { it(this) as BaseEndpoint }
     }
 
     fun processRequest(request: HttpServletRequest, response: HttpServletResponse) {
         val url = request.requestURL.toString()
         val endpoint = endpoints.find { it.url == url }
         if (endpoint != null) {
-            gson.toJson(endpoint.handler!!(), response.writer)
+            gson.toJson(
+                    when (endpoint) {
+                        is BaseEndpoint.Endpoint<*> -> endpoint.handler()
+                        is BaseEndpoint.EndpointWithParam<*, *> -> endpoint.handle(request.getParameter("data"))
+                    },
+                    response.writer
+            )
             response.writer.flush()
             response.writer.close()
         }
@@ -49,4 +73,8 @@ abstract class Remote {
             response.sendError(404)
         }
     }
+}
+
+fun <R> get(url: String): BaseEndpoint.Endpoint<R> {
+    return BaseEndpoint.Endpoint(url)
 }
