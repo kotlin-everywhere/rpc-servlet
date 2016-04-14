@@ -1,0 +1,43 @@
+buildscript {
+    ext.kotlin_version = '1.0.1-2'
+
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply plugin: "kotlin"
+sourceCompatibility = 1.6
+targetCompatibility = 1.6
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+}
+
+// jitpack support
+
+apply plugin: 'maven'
+group = 'com.github.kotlin-everywhere'
+
+//noinspection GroovyAssignabilityCheck
+sourceSets {
+    main.java.srcDirs += 'src/main/kotlin'
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    //noinspection GroovyAssignabilityCheck
+    from sourceSets.main.allSource
+}
+
+artifacts {
+    archives sourcesJar
+}
