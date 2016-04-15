@@ -1,6 +1,7 @@
 package com.github.kotlin_everywhere.rpc
 
 import java.io.BufferedReader
+import java.net.URLDecoder
 import java.security.Principal
 import java.util.*
 import javax.servlet.*
@@ -276,7 +277,12 @@ class TestHttpServletRequest(private val url: String) : HttpServletRequest {
     }
 
     override fun getParameter(name: String?): String? {
-        return url.split("?").last().split("&").map { val (k, v) = it.split("="); k to v }.toMap()[name]
+        return url
+                .split("?")
+                .last()
+                .split("&")
+                .map { val (k, v) = it.split("="); k to URLDecoder.decode(v, "UTF-8") }
+                .toMap()[name]
     }
 
     override fun getRemotePort(): Int {

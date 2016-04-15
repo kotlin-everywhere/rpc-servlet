@@ -3,6 +3,7 @@ package com.github.kotlin_everywhere.rpc
 import com.google.gson.GsonBuilder
 import org.eclipse.jetty.server.Request
 import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.AbstractHandler
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
@@ -47,8 +48,14 @@ abstract class Remote {
     val client: TestClient
         get() = TestClient(this)
 
+    fun serverClient(body: (TestServerClient) -> Unit) {
+        runServer(port = 0) {
+            val port = it.connectors.map { it as ServerConnector? }.filterNotNull().first().localPort
+            body(TestServerClient(port))
+        }
+    }
 
-    fun runServer(port: Int = 8080) {
+    fun runServer(port: Int = 8080, body: ((Server) -> Unit)? = null) {
         Server(port).apply {
             handler = object : AbstractHandler() {
                 override fun handle(target: String?, baseRequest: Request?, request: HttpServletRequest?, response: HttpServletResponse?) {
@@ -56,7 +63,15 @@ abstract class Remote {
                 }
             }
             start()
-            join()
+            if (body != null) {
+                try {
+                    body(server)
+                } finally {
+                    stop()
+                }
+            } else {
+                join()
+            }
         }
     }
 

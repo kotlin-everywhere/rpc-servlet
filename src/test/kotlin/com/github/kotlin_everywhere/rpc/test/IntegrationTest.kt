@@ -26,10 +26,16 @@ class IntegrationTest {
     @Test
     fun testGet() {
         assertEquals(mapOf("version" to "1.0.0"), remote.client.get("/get-only").data)
+        remote.serverClient {
+            assertEquals(mapOf("version" to "1.0.0"), it.get("/get-only").data)
+        }
     }
 
     @Test
     fun testGetWithParam() {
-        assertEquals(mapOf("message" to "Hello!"), remote.client.get("""/get-param?data={"message": "Hello!"}""").data)
+        assertEquals(mapOf("message" to "Hello!"), remote.client.get("/get-param", mapOf("message" to "Hello!")).data)
+        remote.serverClient {
+            assertEquals(mapOf("message" to "Hello!"), it.get("/get-param", mapOf("message" to "Hello!")).data)
+        }
     }
 }
