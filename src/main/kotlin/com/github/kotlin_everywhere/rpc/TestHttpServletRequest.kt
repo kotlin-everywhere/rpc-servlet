@@ -7,7 +7,7 @@ import java.util.*
 import javax.servlet.*
 import javax.servlet.http.*
 
-class TestHttpServletRequest(private val url: String) : HttpServletRequest {
+class TestHttpServletRequest(private val url: String, private val method: Method) : HttpServletRequest {
     override fun isUserInRole(role: String?): Boolean {
         throw UnsupportedOperationException()
     }
@@ -73,7 +73,7 @@ class TestHttpServletRequest(private val url: String) : HttpServletRequest {
     }
 
     override fun getMethod(): String? {
-        throw UnsupportedOperationException()
+        return method.name
     }
 
     override fun isRequestedSessionIdFromURL(): Boolean {

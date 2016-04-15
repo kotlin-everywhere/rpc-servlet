@@ -2,10 +2,16 @@ package com.github.kotlin_everywhere.rpc.test
 
 import com.github.kotlin_everywhere.rpc.Remote
 import com.github.kotlin_everywhere.rpc.get
+import com.github.kotlin_everywhere.rpc.post
 
 class TestRemote : Remote() {
     val getOnly = get<GetOnly>("/get-only")
     val getParam = get<GetParam>("/get-param").withParam<GetParamParam>()
+
+    val postOnly = post<PostOnly>("/post-only")
+
+    val sameGet = get<Same>("/same")
+    val samePost = post<Same>("/same")
 }
 
 interface GetOnly {
@@ -18,4 +24,12 @@ interface GetParam {
 
 interface GetParamParam {
     val message: String
+}
+
+interface PostOnly {
+    val code: Int
+}
+
+interface Same {
+    val method: String
 }

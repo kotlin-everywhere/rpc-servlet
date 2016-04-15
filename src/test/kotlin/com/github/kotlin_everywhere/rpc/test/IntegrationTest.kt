@@ -1,12 +1,14 @@
 package com.github.kotlin_everywhere.rpc.test
 
+import com.github.kotlin_everywhere.rpc.Method
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 data class GetOnlyImpl(override val version: String) : GetOnly
 data class GetParamImpl(override val message: String) : GetParam
 data class GetParamParamImpl(override val message: String) : GetParamParam
-
+data class PostOnlyImpl(override val code: Int) : PostOnly
+data class SameImpl(override val method: String) : Same
 
 class IntegrationTest {
     private var remote: TestRemote
@@ -19,6 +21,18 @@ class IntegrationTest {
 
             getParam(GetParamParamImpl::class.java) {
                 GetParamImpl(it.message)
+            }
+
+            postOnly {
+                PostOnlyImpl(255)
+            }
+
+            sameGet {
+                SameImpl(Method.GET.name)
+            }
+
+            samePost {
+                SameImpl(Method.POST.name)
             }
         }
     }
@@ -37,5 +51,19 @@ class IntegrationTest {
         remote.serverClient {
             assertEquals(mapOf("message" to "Hello!"), it.get("/get-param", mapOf("message" to "Hello!")).data)
         }
+    }
+
+    @Test
+    fun testPost() {
+        assertEquals(255, (remote.client.post("/post-only").data["code"] as Number).toInt())
+        remote.serverClient {
+            assertEquals(255, (remote.client.post("/post-only").data["code"] as Number).toInt())
+        }
+    }
+
+    @Test
+    fun testMethodHandle() {
+        assertEquals(mapOf("method" to "GET"), remote.client.get("/same").data)
+        assertEquals(mapOf("method" to "POST"), remote.client.post("/same").data)
     }
 }

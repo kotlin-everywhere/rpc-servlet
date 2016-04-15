@@ -8,8 +8,12 @@ import org.eclipse.jetty.server.handler.AbstractHandler
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
-sealed class BaseEndpoint(internal val url: String) {
-    class Endpoint<R>(url: String) : BaseEndpoint(url) {
+enum class Method {
+    GET, POST
+}
+
+sealed class BaseEndpoint(internal val url: String, internal val method: Method) {
+    class Endpoint<R>(url: String, method: Method) : BaseEndpoint(url, method) {
         internal lateinit var handler: (() -> R)
 
         operator fun invoke(handler: () -> R) {
@@ -17,11 +21,11 @@ sealed class BaseEndpoint(internal val url: String) {
         }
 
         fun <P> withParam(): EndpointWithParam<R, P> {
-            return EndpointWithParam(url)
+            return EndpointWithParam(url, method)
         }
     }
 
-    class EndpointWithParam<R, P>(url: String) : BaseEndpoint(url) {
+    class EndpointWithParam<R, P>(url: String, method: Method) : BaseEndpoint(url, method) {
         lateinit internal var handler: ((P) -> R)
         lateinit private var clazz: Class<out P>
 
@@ -87,7 +91,8 @@ abstract class Remote {
     }
 
     fun processRequest(request: HttpServletRequest, response: HttpServletResponse): Boolean {
-        val endpoint = endpoints.find { it.url == request.requestURI } ?: return false
+        val method = Method.valueOf(request.method.toUpperCase())
+        val endpoint = endpoints.find { it.url == request.requestURI && it.method == method } ?: return false
 
         gson.toJson(
                 when (endpoint) {
@@ -103,5 +108,9 @@ abstract class Remote {
 }
 
 fun <R> get(url: String): BaseEndpoint.Endpoint<R> {
-    return BaseEndpoint.Endpoint(url)
+    return BaseEndpoint.Endpoint(url, Method.GET)
+}
+
+fun <R> post(url: String): BaseEndpoint.Endpoint<R> {
+    return BaseEndpoint.Endpoint(url, Method.POST)
 }
