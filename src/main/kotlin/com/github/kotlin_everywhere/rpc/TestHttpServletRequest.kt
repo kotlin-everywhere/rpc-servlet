@@ -128,7 +128,7 @@ class TestHttpServletRequest(private val url: String) : HttpServletRequest {
     }
 
     override fun getRequestURI(): String? {
-        throw UnsupportedOperationException()
+        return url.split("?").first()
     }
 
     override fun getHeaderNames(): Enumeration<String>? {

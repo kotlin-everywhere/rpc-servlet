@@ -1,6 +1,9 @@
 package com.github.kotlin_everywhere.rpc
 
 import com.google.gson.GsonBuilder
+import org.eclipse.jetty.server.Request
+import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.server.handler.AbstractHandler
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
@@ -45,6 +48,19 @@ abstract class Remote {
         get() = TestClient(this)
 
 
+    fun runServer(port: Int = 8080) {
+        Server(port).apply {
+            handler = object : AbstractHandler() {
+                override fun handle(target: String?, baseRequest: Request?, request: HttpServletRequest?, response: HttpServletResponse?) {
+                    baseRequest?.isHandled = processRequest(request!!, response!!)
+                }
+            }
+            start()
+            join()
+        }
+    }
+
+
     private val endpoints by lazy(mode = LazyThreadSafetyMode.NONE) {
         this.javaClass.methods
                 .filter { it.parameterCount == 0 }
@@ -55,23 +71,19 @@ abstract class Remote {
                 .map { it(this) as BaseEndpoint }
     }
 
-    fun processRequest(request: HttpServletRequest, response: HttpServletResponse) {
-        val url = request.requestURL.toString()
-        val endpoint = endpoints.find { it.url == url }
-        if (endpoint != null) {
-            gson.toJson(
-                    when (endpoint) {
-                        is BaseEndpoint.Endpoint<*> -> endpoint.handler()
-                        is BaseEndpoint.EndpointWithParam<*, *> -> endpoint.handle(request.getParameter("data"))
-                    },
-                    response.writer
-            )
-            response.writer.flush()
-            response.writer.close()
-        }
-        else {
-            response.sendError(404)
-        }
+    fun processRequest(request: HttpServletRequest, response: HttpServletResponse): Boolean {
+        val endpoint = endpoints.find { it.url == request.requestURI } ?: return false
+
+        gson.toJson(
+                when (endpoint) {
+                    is BaseEndpoint.Endpoint<*> -> endpoint.handler()
+                    is BaseEndpoint.EndpointWithParam<*, *> -> endpoint.handle(request.getParameter("data"))
+                },
+                response.writer
+        )
+        response.writer.flush()
+        response.writer.close()
+        return true
     }
 }
 
