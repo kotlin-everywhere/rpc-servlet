@@ -7,7 +7,7 @@ import java.util.*
 import javax.servlet.*
 import javax.servlet.http.*
 
-class TestHttpServletRequest(private val url: String, private val method: Method) : HttpServletRequest {
+class TestHttpServletRequest(private val url: String, private val method: Method, val body: String? = null) : HttpServletRequest {
     override fun isUserInRole(role: String?): Boolean {
         throw UnsupportedOperationException()
     }
@@ -225,7 +225,7 @@ class TestHttpServletRequest(private val url: String, private val method: Method
     }
 
     override fun getReader(): BufferedReader? {
-        throw UnsupportedOperationException()
+        return BufferedReader(body?.reader())
     }
 
     override fun getScheme(): String? {

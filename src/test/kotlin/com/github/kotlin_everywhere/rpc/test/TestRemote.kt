@@ -9,6 +9,7 @@ class TestRemote : Remote() {
     val getParam = get<GetParam>("/get-param").withParam<GetParamParam>()
 
     val postOnly = post<PostOnly>("/post-only")
+    val postParam = post<PostParam>("/post-param").withParam<PostParamParam>()
 
     val sameGet = get<Same>("/same")
     val samePost = post<Same>("/same")
@@ -28,6 +29,14 @@ interface GetParamParam {
 
 interface PostOnly {
     val code: Int
+}
+
+interface PostParam {
+    val message: String
+}
+
+interface PostParamParam {
+    val message: String
 }
 
 interface Same {

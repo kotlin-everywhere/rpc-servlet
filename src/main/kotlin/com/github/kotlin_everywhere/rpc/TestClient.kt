@@ -19,7 +19,7 @@ class TestClient(private val remote: Remote) : Client() {
     override fun post(url: String, data: Map<*, *>?): Response {
         val testHttpServletResponse = TestHttpServletResponse()
         remote.processRequest(
-                TestHttpServletRequest(buildUrl(url, data), Method.POST),
+                TestHttpServletRequest(url, Method.POST, gson.toJson(data)),
                 testHttpServletResponse
         )
         return TestResponse(testHttpServletResponse)
@@ -44,7 +44,16 @@ class TestResponse(private val testHttpServletResponse: TestHttpServletResponse)
 
 class TestServerClient(val port: Int) : Client() {
     override fun post(url: String, data: Map<*, *>?): Response {
-        throw UnsupportedOperationException()
+        val connection = (URL("http://localhost:$port$url").openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            doOutput = true
+            outputStream.writer().apply {
+                gson.toJson(data, this)
+                flush()
+                close()
+            }
+        }
+        return TestServerResponse(connection)
     }
 
     override fun get(url: String, data: Map<*, *>?): TestServerResponse {

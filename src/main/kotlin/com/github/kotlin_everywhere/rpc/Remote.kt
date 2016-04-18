@@ -97,7 +97,13 @@ abstract class Remote {
         gson.toJson(
                 when (endpoint) {
                     is BaseEndpoint.Endpoint<*> -> endpoint.handler()
-                    is BaseEndpoint.EndpointWithParam<*, *> -> endpoint.handle(request.getParameter("data"))
+                    is BaseEndpoint.EndpointWithParam<*, *> -> {
+                        val data = when (method) {
+                            Method.GET -> request.getParameter("data")
+                            Method.POST -> request.reader.readText()
+                        }
+                        endpoint.handle(data)
+                    }
                 },
                 response.writer
         )

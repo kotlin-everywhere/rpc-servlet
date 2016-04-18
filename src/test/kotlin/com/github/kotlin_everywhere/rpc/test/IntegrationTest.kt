@@ -8,6 +8,8 @@ data class GetOnlyImpl(override val version: String) : GetOnly
 data class GetParamImpl(override val message: String) : GetParam
 data class GetParamParamImpl(override val message: String) : GetParamParam
 data class PostOnlyImpl(override val code: Int) : PostOnly
+data class PostParamImpl(override val message: String) : PostParam
+data class PostParamParamImpl(override val message: String) : PostParamParam
 data class SameImpl(override val method: String) : Same
 
 class IntegrationTest {
@@ -25,6 +27,10 @@ class IntegrationTest {
 
             postOnly {
                 PostOnlyImpl(255)
+            }
+
+            postParam(PostParamParamImpl::class.java) {
+                PostParamImpl(it.message)
             }
 
             sameGet {
@@ -58,6 +64,14 @@ class IntegrationTest {
         assertEquals(255, (remote.client.post("/post-only").data["code"] as Number).toInt())
         remote.serverClient {
             assertEquals(255, (remote.client.post("/post-only").data["code"] as Number).toInt())
+        }
+    }
+
+    @Test
+    fun testPostWithParam() {
+        assertEquals(mapOf("message" to "Hello!"), remote.client.post("/post-param", mapOf("message" to "Hello!")).data)
+        remote.serverClient {
+            assertEquals(mapOf("message" to "Hello!"), it.post("/post-param", mapOf("message" to "Hello!")).data)
         }
     }
 
