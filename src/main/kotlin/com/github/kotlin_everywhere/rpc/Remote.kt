@@ -20,7 +20,7 @@ sealed class BaseEndpoint(internal val url: String, internal val method: Method)
             this.handler = handler
         }
 
-        fun <P> withParam(): EndpointWithParam<R, P> {
+        fun <P> with(): EndpointWithParam<R, P> {
             return EndpointWithParam(url, method)
         }
     }

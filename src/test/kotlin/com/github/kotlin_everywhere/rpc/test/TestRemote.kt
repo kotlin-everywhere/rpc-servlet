@@ -6,10 +6,10 @@ import com.github.kotlin_everywhere.rpc.post
 
 class TestRemote : Remote() {
     val getOnly = get<GetOnly>("/get-only")
-    val getParam = get<GetParam>("/get-param").withParam<GetParamParam>()
+    val getParam = get<GetParam>("/get-param").with<GetParamParam>()
 
     val postOnly = post<PostOnly>("/post-only")
-    val postParam = post<PostParam>("/post-param").withParam<PostParamParam>()
+    val postParam = post<PostParam>("/post-param").with<PostParamParam>()
 
     val sameGet = get<Same>("/same")
     val samePost = post<Same>("/same")
