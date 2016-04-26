@@ -9,7 +9,7 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 enum class Method {
-    GET, POST
+    GET, POST, PUT, DELETE
 }
 
 sealed class BaseEndpoint(internal val url: String, internal val method: Method) {
@@ -100,7 +100,7 @@ abstract class Remote {
                     is BaseEndpoint.EndpointWithParam<*, *> -> {
                         val data = when (method) {
                             Method.GET -> request.getParameter("data")
-                            Method.POST -> request.reader.readText()
+                            Method.POST, Method.PUT, Method.DELETE -> request.reader.readText()
                         }
                         endpoint.handle(data)
                     }
@@ -119,4 +119,12 @@ fun <R> get(url: String): BaseEndpoint.Endpoint<R> {
 
 fun <R> post(url: String): BaseEndpoint.Endpoint<R> {
     return BaseEndpoint.Endpoint(url, Method.POST)
+}
+
+fun <R> put(url: String): BaseEndpoint.Endpoint<R> {
+    return BaseEndpoint.Endpoint(url, Method.PUT)
+}
+
+fun <R> delete(url: String): BaseEndpoint.Endpoint<R> {
+    return BaseEndpoint.Endpoint(url, Method.DELETE)
 }

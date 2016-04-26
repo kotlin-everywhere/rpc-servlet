@@ -40,6 +40,14 @@ class IntegrationTest {
             samePost {
                 SameImpl(Method.POST.name)
             }
+
+            samePut {
+                SameImpl(Method.PUT.name)
+            }
+
+            sameDelete {
+                SameImpl(Method.DELETE.name)
+            }
         }
     }
 
@@ -79,5 +87,13 @@ class IntegrationTest {
     fun testMethodHandle() {
         assertEquals(mapOf("method" to "GET"), remote.client.get("/same").data)
         assertEquals(mapOf("method" to "POST"), remote.client.post("/same").data)
+        assertEquals(mapOf("method" to "PUT"), remote.client.put("/same").data)
+        assertEquals(mapOf("method" to "DELETE"), remote.client.delete("/same").data)
+        remote.serverClient {
+            assertEquals(mapOf("method" to "GET"), it.get("/same").data)
+            assertEquals(mapOf("method" to "POST"), it.post("/same").data)
+            assertEquals(mapOf("method" to "PUT"), it.put("/same").data)
+            assertEquals(mapOf("method" to "DELETE"), it.delete("/same").data)
+        }
     }
 }

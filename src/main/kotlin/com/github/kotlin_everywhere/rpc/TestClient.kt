@@ -8,6 +8,8 @@ import java.net.URLEncoder
 abstract class Client {
     abstract fun get(url: String, data: Map<*, *>? = null): Response
     abstract fun post(url: String, data: Map<*, *>? = null): Response
+    abstract fun put(url: String, data: Map<*, *>? = null): Response
+    abstract fun delete(url: String, data: Map<*, *>? = null): Response
     protected fun buildUrl(url: String, data: Map<*, *>?) = "$url?data=${URLEncoder.encode(gson.toJson(data), "UTF-8")}"
 }
 
@@ -16,10 +18,22 @@ abstract class Response {
 }
 
 class TestClient(private val remote: Remote) : Client() {
+    override fun delete(url: String, data: Map<*, *>?): Response {
+        return processRequest(data, url, Method.DELETE)
+    }
+
     override fun post(url: String, data: Map<*, *>?): Response {
+        return processRequest(data, url, Method.POST)
+    }
+
+    override fun put(url: String, data: Map<*, *>?): Response {
+        return processRequest(data, url, Method.PUT)
+    }
+
+    private fun processRequest(data: Map<*, *>?, url: String, method: Method): TestResponse {
         val testHttpServletResponse = TestHttpServletResponse()
         remote.processRequest(
-                TestHttpServletRequest(url, Method.POST, gson.toJson(data)),
+                TestHttpServletRequest(url, method, gson.toJson(data)),
                 testHttpServletResponse
         )
         return TestResponse(testHttpServletResponse)
@@ -44,8 +58,20 @@ class TestResponse(private val testHttpServletResponse: TestHttpServletResponse)
 
 class TestServerClient(val port: Int) : Client() {
     override fun post(url: String, data: Map<*, *>?): Response {
+        return processRequest(data, url, Method.POST)
+    }
+
+    override fun put(url: String, data: Map<*, *>?): Response {
+        return processRequest(data, url, Method.PUT)
+    }
+
+    override fun delete(url: String, data: Map<*, *>?): Response {
+        return processRequest(data, url, Method.DELETE)
+    }
+
+    private fun processRequest(data: Map<*, *>?, url: String, method: Method): TestServerResponse {
         val connection = (URL("http://localhost:$port$url").openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
+            requestMethod = method.name
             doOutput = true
             outputStream.writer().apply {
                 gson.toJson(data, this)

@@ -1,8 +1,6 @@
 package com.github.kotlin_everywhere.rpc.test
 
-import com.github.kotlin_everywhere.rpc.Remote
-import com.github.kotlin_everywhere.rpc.get
-import com.github.kotlin_everywhere.rpc.post
+import com.github.kotlin_everywhere.rpc.*
 
 class TestRemote : Remote() {
     val getOnly = get<GetOnly>("/get-only")
@@ -13,6 +11,8 @@ class TestRemote : Remote() {
 
     val sameGet = get<Same>("/same")
     val samePost = post<Same>("/same")
+    val samePut = put<Same>("/same")
+    val sameDelete = delete<Same>("/same")
 }
 
 interface GetOnly {
