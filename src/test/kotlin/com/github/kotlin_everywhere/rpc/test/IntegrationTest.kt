@@ -17,6 +17,8 @@ class IntegrationTest {
 
     init {
         remote = TestRemote().apply {
+            index { "index" }
+
             getOnly {
                 GetOnlyImpl("1.0.0")
             }
@@ -94,6 +96,14 @@ class IntegrationTest {
             assertEquals(mapOf("method" to "POST"), it.post("/same").data)
             assertEquals(mapOf("method" to "PUT"), it.put("/same").data)
             assertEquals(mapOf("method" to "DELETE"), it.delete("/same").data)
+        }
+    }
+
+    @Test
+    fun testCorsEnable() {
+        assertEquals(listOf("*"), remote.client.get("/").headers["Access-Control-Allow-Origin"])
+        remote.serverClient {
+            assertEquals(listOf("*"), it.get("/").headers["Access-Control-Allow-Origin"])
         }
     }
 }

@@ -7,6 +7,7 @@ import javax.servlet.ServletOutputStream
 import javax.servlet.http.Cookie
 import javax.servlet.http.HttpServletResponse
 
+@Suppress("OverridingDeprecatedMember")
 class TestHttpServletResponse : HttpServletResponse {
     override fun getWriter(): PrintWriter? {
         return _writer
@@ -14,6 +15,8 @@ class TestHttpServletResponse : HttpServletResponse {
 
     internal val stringWriter = StringWriter()
     internal val _writer: PrintWriter? = PrintWriter(stringWriter)
+
+    private val headers = mutableMapOf<String, MutableList<String>>()
 
     override fun encodeURL(url: String?): String? {
         throw UnsupportedOperationException()
@@ -56,7 +59,7 @@ class TestHttpServletResponse : HttpServletResponse {
     }
 
     override fun getHeaders(name: String?): MutableCollection<String>? {
-        throw UnsupportedOperationException()
+        return headers[name]
     }
 
     override fun addHeader(name: String?, value: String?) {
@@ -92,11 +95,14 @@ class TestHttpServletResponse : HttpServletResponse {
     }
 
     override fun getHeaderNames(): MutableCollection<String>? {
-        throw UnsupportedOperationException()
+        return headers.keys
     }
 
-    override fun setHeader(name: String?, value: String?) {
-        throw UnsupportedOperationException()
+    override fun setHeader(name: String, value: String) {
+        if (name !in headers ) {
+            headers[name] = mutableListOf()
+        }
+        headers[name]!!.add(value)
     }
 
     override fun flushBuffer() {

@@ -3,6 +3,7 @@ package com.github.kotlin_everywhere.rpc.test
 import com.github.kotlin_everywhere.rpc.*
 
 class TestRemote : Remote() {
+    val index = get<String>("/")
     val getOnly = get<GetOnly>("/get-only")
     val getParam = get<GetParam>("/get-param").with<GetParamParam>()
 
