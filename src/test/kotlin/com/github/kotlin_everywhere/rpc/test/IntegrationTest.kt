@@ -3,6 +3,8 @@ package com.github.kotlin_everywhere.rpc.test
 import com.github.kotlin_everywhere.rpc.Method
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.net.HttpURLConnection
+import java.net.URL
 
 data class GetOnlyImpl(override val version: String) : GetOnly
 data class GetParamImpl(override val message: String) : GetParam
@@ -104,6 +106,15 @@ class IntegrationTest {
         assertEquals(listOf("*"), remote.client.get("/").headers["Access-Control-Allow-Origin"])
         remote.serverClient {
             assertEquals(listOf("*"), it.get("/").headers["Access-Control-Allow-Origin"])
+            (URL("http://localhost:${it.port}/").openConnection() as HttpURLConnection).apply {
+                requestMethod = "OPTIONS"
+                assertEquals("GET, OPTIONS", getHeaderField("Access-Control-Allow-Methods"))
+            }
+
+            (URL("http://localhost:${it.port}/same").openConnection() as HttpURLConnection).apply {
+                requestMethod = "OPTIONS"
+                assertEquals("GET, POST, PUT, DELETE, OPTIONS", getHeaderField("Access-Control-Allow-Methods"))
+            }
         }
     }
 }

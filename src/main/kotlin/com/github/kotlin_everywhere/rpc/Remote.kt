@@ -9,7 +9,7 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 enum class Method {
-    GET, POST, PUT, DELETE
+    GET, POST, PUT, DELETE;
 }
 
 sealed class BaseEndpoint(internal val url: String, internal val method: Method) {
@@ -91,7 +91,27 @@ abstract class Remote {
     }
 
     fun processRequest(request: HttpServletRequest, response: HttpServletResponse): Boolean {
-        val method = Method.valueOf(request.method.toUpperCase())
+        val requestMethod = request.method.toUpperCase()
+        if (requestMethod == "OPTIONS") {
+            val matched = endpoints.filter { it.url == request.requestURI }
+            if (matched.isEmpty()) {
+                return false
+            } else {
+                response.setHeader("Access-Control-Allow-Origin", "*")
+                response.setHeader(
+                        "Access-Control-Allow-Methods",
+                        (matched.map { it.method.name } + "OPTIONS").joinToString(", ")
+                )
+                return true
+            }
+        }
+
+        val method: Method = try {
+            Method.valueOf(requestMethod)
+        } catch (e: IllegalArgumentException) {
+            return false
+        }
+
         val endpoint = endpoints.find { it.url == request.requestURI && it.method == method } ?: return false
 
         response.setHeader("Access-Control-Allow-Origin", "*")
