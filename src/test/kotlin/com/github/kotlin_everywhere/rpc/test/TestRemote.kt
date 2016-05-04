@@ -16,30 +16,16 @@ class TestRemote : Remote() {
     val sameDelete = delete<Same>("/same")
 }
 
-interface GetOnly {
-    val version: String
-}
+data class GetOnly(val version: String)
 
-interface GetParam {
-    val message: String
-}
+data class GetParam(val message: String)
 
-interface GetParamParam {
-    val message: String
-}
+data class GetParamParam(val message: String)
 
-interface PostOnly {
-    val code: Int
-}
+data class PostOnly(val code: Int)
 
-interface PostParam {
-    val message: String
-}
+data class PostParam(val message: String)
 
-interface PostParamParam {
-    val message: String
-}
+data class PostParamParam(val message: String)
 
-interface Same {
-    val method: String
-}
+data class Same(val method: String)

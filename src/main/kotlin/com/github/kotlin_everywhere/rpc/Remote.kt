@@ -12,30 +12,28 @@ enum class Method {
     GET, POST, PUT, DELETE;
 }
 
-sealed class BaseEndpoint(internal val url: String, internal val method: Method) {
-    class Endpoint<R>(url: String, method: Method) : BaseEndpoint(url, method) {
+sealed class BaseEndpoint<R>(internal val returnClass: Class<R>, internal val url: String, internal val method: Method) {
+    class Endpoint<R>(returnClass: Class<R>, url: String, method: Method) : BaseEndpoint<R>(returnClass, url, method) {
         internal lateinit var handler: (() -> R)
 
         operator fun invoke(handler: () -> R) {
             this.handler = handler
         }
 
-        fun <P> with(): EndpointWithParam<R, P> {
-            return EndpointWithParam(url, method)
+        inline fun <reified P : Any> with(): EndpointWithParam<R, P> {
+            return EndpointWithParam(this, P::class.java)
         }
     }
 
-    class EndpointWithParam<R, P>(url: String, method: Method) : BaseEndpoint(url, method) {
+    class EndpointWithParam<R, P>(endpoint: Endpoint<R>, internal val parameterClass: Class<P>) : BaseEndpoint<R>(endpoint.returnClass, endpoint.url, endpoint.method) {
         lateinit internal var handler: ((P) -> R)
-        lateinit private var clazz: Class<out P>
 
-        operator fun invoke(clazz: Class<out P>, handler: (P) -> R) {
-            this.clazz = clazz
+        operator fun invoke(handler: (P) -> R) {
             this.handler = handler
         }
 
         internal fun handle(data: String?): R {
-            return handler(gson.fromJson(data, clazz))
+            return handler(gson.fromJson(data, parameterClass))
         }
     }
 }
@@ -87,7 +85,7 @@ abstract class Remote {
                 .filter {
                     it.returnType isExtend BaseEndpoint::class.java
                 }
-                .map { it(this) as BaseEndpoint }
+                .map { it(this) as BaseEndpoint<*> }
     }
 
     fun processRequest(request: HttpServletRequest, response: HttpServletResponse): Boolean {
@@ -137,18 +135,18 @@ abstract class Remote {
     }
 }
 
-fun <R> get(url: String): BaseEndpoint.Endpoint<R> {
-    return BaseEndpoint.Endpoint(url, Method.GET)
+inline fun <reified R : Any> get(url: String): BaseEndpoint.Endpoint<R> {
+    return BaseEndpoint.Endpoint(R::class.java, url, Method.GET)
 }
 
-fun <R> post(url: String): BaseEndpoint.Endpoint<R> {
-    return BaseEndpoint.Endpoint(url, Method.POST)
+inline fun <reified R : Any> post(url: String): BaseEndpoint.Endpoint<R> {
+    return BaseEndpoint.Endpoint(R::class.java, url, Method.POST)
 }
 
-fun <R> put(url: String): BaseEndpoint.Endpoint<R> {
-    return BaseEndpoint.Endpoint(url, Method.PUT)
+inline fun <reified R : Any> put(url: String): BaseEndpoint.Endpoint<R> {
+    return BaseEndpoint.Endpoint(R::class.java, url, Method.PUT)
 }
 
-fun <R> delete(url: String): BaseEndpoint.Endpoint<R> {
-    return BaseEndpoint.Endpoint(url, Method.DELETE)
+inline fun <reified R : Any> delete(url: String): BaseEndpoint.Endpoint<R> {
+    return BaseEndpoint.Endpoint(R::class.java, url, Method.DELETE)
 }

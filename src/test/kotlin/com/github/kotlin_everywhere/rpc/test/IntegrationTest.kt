@@ -6,14 +6,6 @@ import org.junit.Test
 import java.net.HttpURLConnection
 import java.net.URL
 
-data class GetOnlyImpl(override val version: String) : GetOnly
-data class GetParamImpl(override val message: String) : GetParam
-data class GetParamParamImpl(override val message: String) : GetParamParam
-data class PostOnlyImpl(override val code: Int) : PostOnly
-data class PostParamImpl(override val message: String) : PostParam
-data class PostParamParamImpl(override val message: String) : PostParamParam
-data class SameImpl(override val method: String) : Same
-
 class IntegrationTest {
     private var remote: TestRemote
 
@@ -22,35 +14,35 @@ class IntegrationTest {
             index { "index" }
 
             getOnly {
-                GetOnlyImpl("1.0.0")
+                GetOnly("1.0.0")
             }
 
-            getParam(GetParamParamImpl::class.java) {
-                GetParamImpl(it.message)
+            getParam {
+                GetParam(it.message)
             }
 
             postOnly {
-                PostOnlyImpl(255)
+                PostOnly(255)
             }
 
-            postParam(PostParamParamImpl::class.java) {
-                PostParamImpl(it.message)
+            postParam {
+                PostParam(it.message)
             }
 
             sameGet {
-                SameImpl(Method.GET.name)
+                Same(Method.GET.name)
             }
 
             samePost {
-                SameImpl(Method.POST.name)
+                Same(Method.POST.name)
             }
 
             samePut {
-                SameImpl(Method.PUT.name)
+                Same(Method.PUT.name)
             }
 
             sameDelete {
-                SameImpl(Method.DELETE.name)
+                Same(Method.DELETE.name)
             }
         }
     }
