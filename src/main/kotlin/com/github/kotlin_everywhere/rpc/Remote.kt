@@ -114,6 +114,7 @@ abstract class Remote {
         val endpoint = endpoints.find { it.url == request.requestURI && it.method == method } ?: return false
 
         response.setHeader("Access-Control-Allow-Origin", "*")
+        response.setHeader("Content-Type", "application/json")
 
         gson.toJson(
                 when (endpoint) {

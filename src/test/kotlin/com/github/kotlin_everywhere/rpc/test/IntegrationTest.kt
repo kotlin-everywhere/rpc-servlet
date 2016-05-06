@@ -94,6 +94,14 @@ class IntegrationTest {
     }
 
     @Test
+    fun testContentType() {
+        assertEquals(listOf("application/json"), remote.client.get("/").headers["Content-Type"])
+        remote.serverClient {
+            assertEquals(listOf("application/json"), it.get("/").headers["Content-Type"])
+        }
+    }
+
+    @Test
     fun testCorsEnable() {
         assertEquals(listOf("*"), remote.client.get("/").headers["Access-Control-Allow-Origin"])
         remote.serverClient {
