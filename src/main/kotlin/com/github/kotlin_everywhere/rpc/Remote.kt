@@ -100,7 +100,7 @@ abstract class Remote {
                         "Access-Control-Allow-Methods",
                         (matched.map { it.method.name } + "OPTIONS").joinToString(", ")
                 )
-                response.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept")
+                response.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With")
                 return true
             }
         }

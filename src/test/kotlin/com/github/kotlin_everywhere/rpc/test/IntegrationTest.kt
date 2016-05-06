@@ -101,7 +101,7 @@ class IntegrationTest {
             (URL("http://localhost:${it.port}/").openConnection() as HttpURLConnection).apply {
                 requestMethod = "OPTIONS"
                 assertEquals("GET, OPTIONS", getHeaderField("Access-Control-Allow-Methods"))
-                assertEquals("Content-Type, Accept", getHeaderField("Access-Control-Allow-Headers"))
+                assertEquals("Content-Type, Accept, X-Requested-With", getHeaderField("Access-Control-Allow-Headers"))
             }
 
             (URL("http://localhost:${it.port}/same").openConnection() as HttpURLConnection).apply {
