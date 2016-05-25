@@ -12,32 +12,6 @@ enum class Method {
     GET, POST, PUT, DELETE;
 }
 
-sealed class BaseEndpoint<R>(internal val returnClass: Class<R>, internal val url: String, internal val method: Method) {
-    class Endpoint<R>(returnClass: Class<R>, url: String, method: Method) : BaseEndpoint<R>(returnClass, url, method) {
-        internal lateinit var handler: (() -> R)
-
-        operator fun invoke(handler: () -> R) {
-            this.handler = handler
-        }
-
-        inline fun <reified P : Any> with(): EndpointWithParam<R, P> {
-            return EndpointWithParam(this, P::class.java)
-        }
-    }
-
-    class EndpointWithParam<R, P>(endpoint: Endpoint<R>, internal val parameterClass: Class<P>) : BaseEndpoint<R>(endpoint.returnClass, endpoint.url, endpoint.method) {
-        lateinit internal var handler: ((P) -> R)
-
-        operator fun invoke(handler: (P) -> R) {
-            this.handler = handler
-        }
-
-        internal fun handle(data: String?): R {
-            return handler(gson.fromJson(data, parameterClass))
-        }
-    }
-}
-
 infix fun Class<*>.isExtend(clazz: Class<*>): Boolean {
     return clazz.isAssignableFrom(this)
 }
@@ -78,27 +52,29 @@ abstract class Remote {
     }
 
 
-    private val endpoints by lazy(mode = LazyThreadSafetyMode.NONE) {
+    private val endpoints: List<Pair<String, Endpoint<*, *>>> by lazy(mode = LazyThreadSafetyMode.NONE) {
         this.javaClass.methods
                 .filter { it.parameterCount == 0 }
                 .filter { it.name.startsWith("get") && it.name.length > 3 }
-                .filter {
-                    it.returnType isExtend BaseEndpoint::class.java
+                .filter { it.returnType == Endpoint::class.java }
+                .map { method ->
+                    (method(this) as Endpoint<*, *>).let {
+                        (it.url ?: "/${method.name.substring(3, 4).toLowerCase()}${method.name.substring(4)}") to it
+                    }
                 }
-                .map { it(this) as BaseEndpoint<*> }
     }
 
     fun processRequest(request: HttpServletRequest, response: HttpServletResponse): Boolean {
         val requestMethod = request.method.toUpperCase()
         if (requestMethod == "OPTIONS") {
-            val matched = endpoints.filter { it.url == request.requestURI }
+            val matched = endpoints.filter { it.first == request.requestURI }
             if (matched.isEmpty()) {
                 return false
             } else {
                 response.setHeader("Access-Control-Allow-Origin", "*")
                 response.setHeader(
                         "Access-Control-Allow-Methods",
-                        (matched.map { it.method.name } + "OPTIONS").joinToString(", ")
+                        (matched.map { it.second.method.name } + "OPTIONS").joinToString(", ")
                 )
                 response.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With")
                 return true
@@ -111,24 +87,13 @@ abstract class Remote {
             return false
         }
 
-        val endpoint = endpoints.find { it.url == request.requestURI && it.method == method } ?: return false
-
         response.setHeader("Access-Control-Allow-Origin", "*")
         response.setHeader("Content-Type", "application/json")
 
-        gson.toJson(
-                when (endpoint) {
-                    is BaseEndpoint.Endpoint<*> -> endpoint.handler()
-                    is BaseEndpoint.EndpointWithParam<*, *> -> {
-                        val data = when (method) {
-                            Method.GET -> request.getParameter("data")
-                            Method.POST, Method.PUT, Method.DELETE -> request.reader.readText()
-                        }
-                        endpoint.handle(data)
-                    }
-                },
-                response.writer
-        )
+        val endpoint = endpoints.find { it.first == request.requestURI && it.second.method == method } ?: return false
+        val result = endpoint.second.handle(request)
+
+        gson.toJson(result, response.writer)
         response.writer.flush()
         response.writer.close()
 
@@ -136,18 +101,18 @@ abstract class Remote {
     }
 }
 
-inline fun <reified R : Any> get(url: String): BaseEndpoint.Endpoint<R> {
-    return BaseEndpoint.Endpoint(R::class.java, url, Method.GET)
+inline fun <reified P : Any, reified R : Any> get(url: String? = null): Endpoint<P, R> {
+    return Endpoint(url, Method.GET, P::class.java, R::class.java)
 }
 
-inline fun <reified R : Any> post(url: String): BaseEndpoint.Endpoint<R> {
-    return BaseEndpoint.Endpoint(R::class.java, url, Method.POST)
+inline fun <reified P : Any, reified R : Any> post(url: String? = null): Endpoint<P, R> {
+    return Endpoint(url, Method.POST, P::class.java, R::class.java)
 }
 
-inline fun <reified R : Any> put(url: String): BaseEndpoint.Endpoint<R> {
-    return BaseEndpoint.Endpoint(R::class.java, url, Method.PUT)
+inline fun <reified P : Any, reified R : Any> put(url: String? = null): Endpoint<P, R> {
+    return Endpoint(url, Method.PUT, P::class.java, R::class.java)
 }
 
-inline fun <reified R : Any> delete(url: String): BaseEndpoint.Endpoint<R> {
-    return BaseEndpoint.Endpoint(R::class.java, url, Method.DELETE)
+inline fun <reified P : Any, reified R : Any> delete(url: String? = null): Endpoint<P, R> {
+    return Endpoint(url, Method.DELETE, P::class.java, R::class.java)
 }

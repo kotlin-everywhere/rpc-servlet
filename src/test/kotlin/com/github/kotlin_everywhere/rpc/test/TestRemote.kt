@@ -3,17 +3,20 @@ package com.github.kotlin_everywhere.rpc.test
 import com.github.kotlin_everywhere.rpc.*
 
 class TestRemote : Remote() {
-    val index = get<String>("/")
-    val getOnly = get<GetOnly>("/get-only")
-    val getParam = get<GetParam>("/get-param").with<GetParamParam>()
+    val index = get<Unit, String>("/")
 
-    val postOnly = post<PostOnly>("/post-only")
-    val postParam = post<PostParam>("/post-param").with<PostParamParam>()
+    val getOnly = get<Unit, GetOnly>()
+    val getParam = get<GetParamParam, GetParam>()
 
-    val sameGet = get<Same>("/same")
-    val samePost = post<Same>("/same")
-    val samePut = put<Same>("/same")
-    val sameDelete = delete<Same>("/same")
+    val postOnly = post<Unit, PostOnly>()
+    val postParam = post<PostParamParam, PostParam>()
+
+    val sameGet = get<Unit, Same>("/same")
+    val samePost = post<Unit, Same>("/same")
+    val samePut = put<Unit, Same>("/same")
+    val sameDelete = delete<Unit, Same>("/same")
+
+    val emptyResponse = get<Unit, Unit>()
 }
 
 data class GetOnly(val version: String)

@@ -44,38 +44,41 @@ class IntegrationTest {
             sameDelete {
                 Same(Method.DELETE.name)
             }
+
+            emptyResponse {
+            }
         }
     }
 
     @Test
     fun testGet() {
-        assertEquals(mapOf("version" to "1.0.0"), remote.client.get("/get-only").data)
+        assertEquals(mapOf("version" to "1.0.0"), remote.client.get("/getOnly").data)
         remote.serverClient {
-            assertEquals(mapOf("version" to "1.0.0"), it.get("/get-only").data)
+            assertEquals(mapOf("version" to "1.0.0"), it.get("/getOnly").data)
         }
     }
 
     @Test
     fun testGetWithParam() {
-        assertEquals(mapOf("message" to "Hello!"), remote.client.get("/get-param", mapOf("message" to "Hello!")).data)
+        assertEquals(mapOf("message" to "Hello!"), remote.client.get("/getParam", mapOf("message" to "Hello!")).data)
         remote.serverClient {
-            assertEquals(mapOf("message" to "Hello!"), it.get("/get-param", mapOf("message" to "Hello!")).data)
+            assertEquals(mapOf("message" to "Hello!"), it.get("/getParam", mapOf("message" to "Hello!")).data)
         }
     }
 
     @Test
     fun testPost() {
-        assertEquals(255, (remote.client.post("/post-only").data["code"] as Number).toInt())
+        assertEquals(255, (remote.client.post("/postOnly").data["code"] as Number).toInt())
         remote.serverClient {
-            assertEquals(255, (remote.client.post("/post-only").data["code"] as Number).toInt())
+            assertEquals(255, (remote.client.post("/postOnly").data["code"] as Number).toInt())
         }
     }
 
     @Test
     fun testPostWithParam() {
-        assertEquals(mapOf("message" to "Hello!"), remote.client.post("/post-param", mapOf("message" to "Hello!")).data)
+        assertEquals(mapOf("message" to "Hello!"), remote.client.post("/postParam", mapOf("message" to "Hello!")).data)
         remote.serverClient {
-            assertEquals(mapOf("message" to "Hello!"), it.post("/post-param", mapOf("message" to "Hello!")).data)
+            assertEquals(mapOf("message" to "Hello!"), it.post("/postParam", mapOf("message" to "Hello!")).data)
         }
     }
 
@@ -99,6 +102,11 @@ class IntegrationTest {
         remote.serverClient {
             assertEquals(listOf("application/json"), it.get("/").headers["Content-Type"])
         }
+    }
+
+    @Test
+    fun testEmptyResponse() {
+        assertEquals(emptyMap<String, Any?>(), remote.client.get("/emptyResponse").data)
     }
 
     @Test
