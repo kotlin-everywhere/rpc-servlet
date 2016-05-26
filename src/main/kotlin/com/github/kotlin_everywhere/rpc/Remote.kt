@@ -12,15 +12,9 @@ enum class Method {
     GET, POST, PUT, DELETE;
 }
 
-infix fun Class<*>.isExtend(clazz: Class<*>): Boolean {
-    return clazz.isAssignableFrom(this)
-}
-
-internal val gson = GsonBuilder().create()
+val gson = GsonBuilder().create()
 
 abstract class Remote {
-
-
     val client: TestClient
         get() = TestClient(this)
 
@@ -88,7 +82,7 @@ abstract class Remote {
         }
 
         response.setHeader("Access-Control-Allow-Origin", "*")
-        response.setHeader("Content-Type", "application/json")
+        response.setHeader("Content-Type", "application/json; charset=utf-8")
 
         val endpoint = endpoints.find { it.first == request.requestURI && it.second.method == method } ?: return false
         val result = endpoint.second.handle(request)

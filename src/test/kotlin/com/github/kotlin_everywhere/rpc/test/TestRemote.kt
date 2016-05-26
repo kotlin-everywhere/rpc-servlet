@@ -17,6 +17,7 @@ class TestRemote : Remote() {
     val sameDelete = delete<Unit, Same>("/same")
 
     val emptyResponse = get<Unit, Unit>()
+    val hangul = get<Unit, String>()
 }
 
 data class GetOnly(val version: String)

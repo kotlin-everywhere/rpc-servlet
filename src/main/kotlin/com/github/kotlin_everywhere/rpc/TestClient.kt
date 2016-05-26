@@ -15,6 +15,12 @@ abstract class Client {
 
 abstract class Response {
     abstract val data: Map<String, Any?>
+
+    inline fun <reified T : Any> returnValue(): T {
+        return gson.fromJson(responseBody, T::class.java)
+    }
+
+    abstract val responseBody: String
     abstract val headers: Map<String, List<String>>
 }
 
@@ -53,8 +59,11 @@ class TestClient(private val remote: Remote) : Client() {
 class TestResponse(private val testHttpServletResponse: TestHttpServletResponse) : Response() {
     @Suppress("UNCHECKED_CAST")
     override val data: Map<String, Any?> by lazy {
-        gson.fromJson(testHttpServletResponse.stringWriter.toString(), Any::class.java) as Map<String, Any?>
+        gson.fromJson(responseBody, Any::class.java) as Map<String, Any?>
     }
+
+    override val responseBody: String by lazy { testHttpServletResponse.stringWriter.toString() }
+
     override val headers: Map<String, List<String>> by lazy {
         testHttpServletResponse
                 .headerNames
@@ -96,12 +105,14 @@ class TestServerClient(val port: Int) : Client() {
 }
 
 class TestServerResponse(private val connection: HttpURLConnection) : Response() {
+    override val responseBody: String by lazy { InputStreamReader(connection.inputStream).readText() }
+
     override val headers: Map<String, List<String>> by lazy {
         connection.headerFields
     }
 
     @Suppress("UNCHECKED_CAST")
     override val data: Map<String, Any?> by lazy {
-        gson.fromJson(InputStreamReader(connection.inputStream), Any::class.java) as Map<String, Any?>
+        gson.fromJson(responseBody, Any::class.java) as Map<String, Any?>
     }
 }

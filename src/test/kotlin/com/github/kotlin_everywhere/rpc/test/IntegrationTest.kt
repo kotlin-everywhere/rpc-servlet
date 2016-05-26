@@ -45,7 +45,10 @@ class IntegrationTest {
                 Same(Method.DELETE.name)
             }
 
-            emptyResponse {
+            emptyResponse {}
+
+            hangul {
+                "한글"
             }
         }
     }
@@ -98,15 +101,23 @@ class IntegrationTest {
 
     @Test
     fun testContentType() {
-        assertEquals(listOf("application/json"), remote.client.get("/").headers["Content-Type"])
+        assertEquals(listOf("application/json; charset=utf-8"), remote.client.get("/").headers["Content-Type"])
         remote.serverClient {
-            assertEquals(listOf("application/json"), it.get("/").headers["Content-Type"])
+            assertEquals(listOf("application/json; charset=utf-8"), it.get("/").headers["Content-Type"])
         }
     }
 
     @Test
     fun testEmptyResponse() {
         assertEquals(emptyMap<String, Any?>(), remote.client.get("/emptyResponse").data)
+    }
+
+    @Test
+    fun testHangul() {
+        assertEquals("한글", remote.client.get("/hangul").returnValue<String>())
+        remote.serverClient {
+            assertEquals("한글", it.get("/hangul").returnValue<String>())
+        }
     }
 
     @Test
