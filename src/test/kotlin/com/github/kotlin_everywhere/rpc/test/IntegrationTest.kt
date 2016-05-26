@@ -1,10 +1,13 @@
 package com.github.kotlin_everywhere.rpc.test
 
 import com.github.kotlin_everywhere.rpc.Method
+import com.github.kotlin_everywhere.rpc.Remote
+import com.github.kotlin_everywhere.rpc.get
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.net.HttpURLConnection
 import java.net.URL
+import javax.naming.ConfigurationException
 
 class IntegrationTest {
     private var remote: TestRemote
@@ -136,5 +139,14 @@ class IntegrationTest {
                 assertEquals("GET, POST, PUT, DELETE, OPTIONS", getHeaderField("Access-Control-Allow-Methods"))
             }
         }
+    }
+
+    @Test(expected = ConfigurationException::class)
+    fun testMissingHandler() {
+        val r = object : Remote() {
+            @Suppress("unused")
+            val index = get<Unit, Unit>("/")
+        }
+        r.client.get("/")
     }
 }

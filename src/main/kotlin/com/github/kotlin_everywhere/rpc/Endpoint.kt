@@ -2,8 +2,7 @@ package com.github.kotlin_everywhere.rpc
 
 import javax.servlet.http.HttpServletRequest
 
-class Endpoint<P, R>(internal val url: String? = null, val method: Method, private val paramterClass: Class<P>,
-                     private val responseClass: Class<R>) {
+class Endpoint<P, R>(internal val url: String? = null, val method: Method, private val parameterClass: Class<P>) {
 
     private lateinit var handler: (P) -> R
 
@@ -14,7 +13,7 @@ class Endpoint<P, R>(internal val url: String? = null, val method: Method, priva
     internal fun handle(request: HttpServletRequest): R {
         @Suppress("UNCHECKED_CAST")
         val param: P =
-                if (paramterClass == Unit::class.java) {
+                if (parameterClass == Unit::class.java) {
                     Unit as P
                 } else {
                     gson.fromJson(
@@ -22,10 +21,19 @@ class Endpoint<P, R>(internal val url: String? = null, val method: Method, priva
                                 Method.GET -> request.getParameter("data")
                                 Method.POST, Method.PUT, Method.DELETE -> request.reader.readText()
                             },
-                            paramterClass
+                            parameterClass
                     )
                 }
 
         return handler(param)
     }
+
+    val isHandlerInitialized: Boolean
+        get() = try {
+            @Suppress("UNUSED_VARIABLE")
+            val h = handler;
+            true
+        } catch (e: UninitializedPropertyAccessException) {
+            false
+        }
 }

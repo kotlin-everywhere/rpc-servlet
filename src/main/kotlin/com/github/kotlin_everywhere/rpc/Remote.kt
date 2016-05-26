@@ -5,6 +5,7 @@ import org.eclipse.jetty.server.Request
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.ServerConnector
 import org.eclipse.jetty.server.handler.AbstractHandler
+import javax.naming.ConfigurationException
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
@@ -45,30 +46,42 @@ abstract class Remote {
         }
     }
 
+    data class EndpointBox<P, R>(val endpoint: Endpoint<P, R>, val url: String, val name: String)
 
-    private val endpoints: List<Pair<String, Endpoint<*, *>>> by lazy(mode = LazyThreadSafetyMode.NONE) {
+    private val endpoints: List<EndpointBox<*, *>> by lazy(mode = LazyThreadSafetyMode.NONE) {
         this.javaClass.methods
                 .filter { it.parameterCount == 0 }
                 .filter { it.name.startsWith("get") && it.name.length > 3 }
                 .filter { it.returnType == Endpoint::class.java }
                 .map { method ->
                     (method(this) as Endpoint<*, *>).let {
-                        (it.url ?: "/${method.name.substring(3, 4).toLowerCase()}${method.name.substring(4)}") to it
+                        val name = "${method.name.substring(3, 4).toLowerCase()}${method.name.substring(4)}"
+                        EndpointBox(it, it.url ?: "/" + name, name)
                     }
+                }
+                .apply {
+                    filter { !it.endpoint.isHandlerInitialized }
+                            .map { it.name }
+                            .joinToString(",")
+                            .apply {
+                                if (isNotEmpty()) {
+                                    throw ConfigurationException("Handlers of follow endpoints are missing. - $this.")
+                                }
+                            }
                 }
     }
 
     fun processRequest(request: HttpServletRequest, response: HttpServletResponse): Boolean {
         val requestMethod = request.method.toUpperCase()
         if (requestMethod == "OPTIONS") {
-            val matched = endpoints.filter { it.first == request.requestURI }
+            val matched = endpoints.filter { it.url == request.requestURI }
             if (matched.isEmpty()) {
                 return false
             } else {
                 response.setHeader("Access-Control-Allow-Origin", "*")
                 response.setHeader(
                         "Access-Control-Allow-Methods",
-                        (matched.map { it.second.method.name } + "OPTIONS").joinToString(", ")
+                        (matched.map { it.endpoint.method.name } + "OPTIONS").joinToString(", ")
                 )
                 response.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With")
                 return true
@@ -84,8 +97,8 @@ abstract class Remote {
         response.setHeader("Access-Control-Allow-Origin", "*")
         response.setHeader("Content-Type", "application/json; charset=utf-8")
 
-        val endpoint = endpoints.find { it.first == request.requestURI && it.second.method == method } ?: return false
-        val result = endpoint.second.handle(request)
+        val endpointBox = endpoints.find { it.url == request.requestURI && it.endpoint.method == method } ?: return false
+        val result = endpointBox.endpoint.handle(request)
 
         gson.toJson(result, response.writer)
         response.writer.flush()
@@ -95,18 +108,18 @@ abstract class Remote {
     }
 }
 
-inline fun <reified P : Any, reified R : Any> get(url: String? = null): Endpoint<P, R> {
-    return Endpoint(url, Method.GET, P::class.java, R::class.java)
+inline fun <reified P : Any, R> get(url: String? = null): Endpoint<P, R> {
+    return Endpoint(url, Method.GET, P::class.java)
 }
 
-inline fun <reified P : Any, reified R : Any> post(url: String? = null): Endpoint<P, R> {
-    return Endpoint(url, Method.POST, P::class.java, R::class.java)
+inline fun <reified P : Any, R> post(url: String? = null): Endpoint<P, R> {
+    return Endpoint(url, Method.POST, P::class.java)
 }
 
-inline fun <reified P : Any, reified R : Any> put(url: String? = null): Endpoint<P, R> {
-    return Endpoint(url, Method.PUT, P::class.java, R::class.java)
+inline fun <reified P : Any, R> put(url: String? = null): Endpoint<P, R> {
+    return Endpoint(url, Method.PUT, P::class.java)
 }
 
-inline fun <reified P : Any, reified R : Any> delete(url: String? = null): Endpoint<P, R> {
-    return Endpoint(url, Method.DELETE, P::class.java, R::class.java)
+inline fun <reified P : Any, R> delete(url: String? = null): Endpoint<P, R> {
+    return Endpoint(url, Method.DELETE, P::class.java)
 }
