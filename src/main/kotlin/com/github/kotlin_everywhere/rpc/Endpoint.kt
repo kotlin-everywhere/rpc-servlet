@@ -2,14 +2,9 @@ package com.github.kotlin_everywhere.rpc
 
 import javax.servlet.http.HttpServletRequest
 
-class Endpoint<P, R>(internal val url: String? = null, val method: Method, private val parameterClass: Class<P>) {
-
-    private lateinit var handler: (P) -> R
-
-    operator fun invoke(handler: (P) -> R) {
-        this.handler = handler
-    }
-
+abstract class Endpoint<P, R>(internal val url: String?, val method: Method,
+                              protected val parameterClass: Class<P>) {
+    protected lateinit var handler: (P) -> R
     internal fun handle(request: HttpServletRequest): R {
         @Suppress("UNCHECKED_CAST")
         val param: P =
@@ -36,4 +31,19 @@ class Endpoint<P, R>(internal val url: String? = null, val method: Method, priva
         } catch (e: UninitializedPropertyAccessException) {
             false
         }
+
 }
+
+class Producer<R>(url: String? = null, method: Method) : Endpoint<Unit, R>(url, method, Unit::class.java) {
+    operator fun invoke(handler: () -> R) {
+        this.handler = { handler() }
+    }
+}
+
+class Function<P, R>(url: String? = null, method: Method, parameterClass: Class<P>) : Endpoint<P, R>(url, method, parameterClass) {
+    operator fun invoke(handler: (P) -> R) {
+        this.handler = { handler(it) }
+    }
+}
+
+

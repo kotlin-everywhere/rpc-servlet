@@ -13,6 +13,10 @@ enum class Method {
     GET, POST, PUT, DELETE;
 }
 
+infix fun Class<*>.isExtend(clazz: Class<*>): Boolean {
+    return clazz.isAssignableFrom(this)
+}
+
 val gson = GsonBuilder().create()
 
 abstract class Remote {
@@ -52,7 +56,7 @@ abstract class Remote {
         this.javaClass.methods
                 .filter { it.parameterCount == 0 }
                 .filter { it.name.startsWith("get") && it.name.length > 3 }
-                .filter { it.returnType == Endpoint::class.java }
+                .filter { it.returnType isExtend Endpoint::class.java }
                 .map { method ->
                     (method(this) as Endpoint<*, *>).let {
                         val name = "${method.name.substring(3, 4).toLowerCase()}${method.name.substring(4)}"
@@ -99,27 +103,41 @@ abstract class Remote {
 
         val endpointBox = endpoints.find { it.url == request.requestURI && it.endpoint.method == method } ?: return false
         val result = endpointBox.endpoint.handle(request)
-
-        gson.toJson(result, response.writer)
+        if (result !== Unit) {
+            gson.toJson(result, response.writer)
+        }
         response.writer.flush()
         response.writer.close()
 
         return true
     }
+
+    fun <R> get(url: String? = null): Producer<R> {
+        return Producer(url, Method.GET);
+    }
+    fun <R> post(url: String? = null): Producer<R> {
+        return Producer(url, Method.POST);
+    }
+    fun <R> put(url: String? = null): Producer<R> {
+        return Producer(url, Method.PUT);
+    }
+    fun <R> delete(url: String? = null): Producer<R> {
+        return Producer(url, Method.DELETE);
+    }
 }
 
-inline fun <reified P : Any, R> get(url: String? = null): Endpoint<P, R> {
-    return Endpoint(url, Method.GET, P::class.java)
+inline fun <reified P : Any, R> get(url: String? = null): Function<P, R> {
+    return Function(url, Method.GET, P::class.java);
 }
 
-inline fun <reified P : Any, R> post(url: String? = null): Endpoint<P, R> {
-    return Endpoint(url, Method.POST, P::class.java)
+inline fun <reified P : Any, R> post(url: String? = null): Function<P, R> {
+    return Function(url, Method.POST, P::class.java)
 }
 
-inline fun <reified P : Any, R> put(url: String? = null): Endpoint<P, R> {
-    return Endpoint(url, Method.PUT, P::class.java)
+inline fun <reified P : Any, R> put(url: String? = null): Function<P, R> {
+    return Function(url, Method.PUT, P::class.java)
 }
 
-inline fun <reified P : Any, R> delete(url: String? = null): Endpoint<P, R> {
-    return Endpoint(url, Method.DELETE, P::class.java)
+inline fun <reified P : Any, R> delete(url: String? = null): Function<P, R> {
+    return Function(url, Method.DELETE, P::class.java)
 }

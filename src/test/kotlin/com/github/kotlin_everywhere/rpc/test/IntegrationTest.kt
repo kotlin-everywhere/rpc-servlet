@@ -2,7 +2,6 @@ package com.github.kotlin_everywhere.rpc.test
 
 import com.github.kotlin_everywhere.rpc.Method
 import com.github.kotlin_everywhere.rpc.Remote
-import com.github.kotlin_everywhere.rpc.get
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.net.HttpURLConnection
@@ -112,7 +111,7 @@ class IntegrationTest {
 
     @Test
     fun testEmptyResponse() {
-        assertEquals(emptyMap<String, Any?>(), remote.client.get("/emptyResponse").data)
+        assertEquals("", remote.client.get("/emptyResponse").responseBody)
     }
 
     @Test
@@ -145,7 +144,7 @@ class IntegrationTest {
     fun testMissingHandler() {
         val r = object : Remote() {
             @Suppress("unused")
-            val index = get<Unit, Unit>("/")
+            val index = get<Unit>("/")
         }
         r.client.get("/")
     }
