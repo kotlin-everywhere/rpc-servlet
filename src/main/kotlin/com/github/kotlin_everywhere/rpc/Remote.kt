@@ -52,6 +52,9 @@ abstract class Remote(val urlPrefix: String? = null) {
     }
 
     fun runServer(port: Int = 8080, body: ((Server) -> Unit)? = null) {
+        // force to check all handlers are in place
+        endpoints
+
         Server(port).apply {
             handler = object : AbstractHandler() {
                 override fun handle(target: String?, baseRequest: Request?, request: HttpServletRequest?, response: HttpServletResponse?) {
@@ -155,7 +158,10 @@ abstract class Remote(val urlPrefix: String? = null) {
                 try {
                     processRequestImpl(request)
                 } catch (e: RemoteException) {
-                    ProcessResponse(code = e.code, data = e.json())
+                    e.toProcessResponse()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    RemoteException(500, "Internal Server Error").toProcessResponse()
                 }
         response.status = processResponse.code
         val headers = (
@@ -169,6 +175,9 @@ abstract class Remote(val urlPrefix: String? = null) {
         response.writer.close()
         return true
     }
+
+    private fun RemoteException.toProcessResponse(): Remote.ProcessResponse =
+            ProcessResponse(code = code, data = json())
 
     fun <R> get(url: String? = null): Producer<R> {
         return Producer(url, Method.GET);
@@ -186,6 +195,7 @@ abstract class Remote(val urlPrefix: String? = null) {
         return Producer(url, Method.DELETE);
     }
 }
+
 
 inline fun <reified P : Any, R> get(url: String? = null): Function<P, R> {
     return Function(url, Method.GET, P::class.java);

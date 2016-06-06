@@ -146,6 +146,6 @@ class IntegrationTest {
             @Suppress("unused")
             val index = get<Unit>("/")
         }
-        r.client.get("/")
+        r.runServer { }
     }
 }

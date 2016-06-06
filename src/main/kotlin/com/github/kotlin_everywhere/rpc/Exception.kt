@@ -5,4 +5,6 @@ open class RemoteException(val code: Int, message: String) : Exception(message) 
 }
 
 class NotFound : RemoteException(404, "Not Found")
+class Unauthorized: RemoteException(401, "Unauthorized")
+
 
