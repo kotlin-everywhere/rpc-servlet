@@ -19,7 +19,7 @@ infix fun Class<*>.isExtend(clazz: Class<*>): Boolean {
 
 val gson = GsonBuilder().create()
 
-abstract class Remote {
+abstract class Remote(val urlPrefix: String? = null) {
     val client: TestClient
         get() = TestClient(this)
 
@@ -52,27 +52,44 @@ abstract class Remote {
 
     data class EndpointBox<P, R>(val endpoint: Endpoint<P, R>, val url: String, val name: String)
 
-    private val endpoints: List<EndpointBox<*, *>> by lazy(mode = LazyThreadSafetyMode.NONE) {
-        this.javaClass.methods
+    private inline fun <reified T : Any> Any.properties(): List<Pair<String, T>> {
+        return this.javaClass.methods
                 .filter { it.parameterCount == 0 }
                 .filter { it.name.startsWith("get") && it.name.length > 3 }
-                .filter { it.returnType isExtend Endpoint::class.java }
+                .filter { it.returnType isExtend T::class.java }
                 .map { method ->
-                    (method(this) as Endpoint<*, *>).let {
+                    (method(this) as T).let {
                         val name = "${method.name.substring(3, 4).toLowerCase()}${method.name.substring(4)}"
-                        EndpointBox(it, it.url ?: "/" + name, name)
+                        name to it
                     }
                 }
-                .apply {
-                    filter { !it.endpoint.isHandlerInitialized }
-                            .map { it.name }
-                            .joinToString(",")
-                            .apply {
-                                if (isNotEmpty()) {
-                                    throw ConfigurationException("Handlers of follow endpoints are missing. - $this.")
-                                }
-                            }
-                }
+    }
+
+    private fun buildEndpoints(urlPrefix: String): List<EndpointBox<*, *>> {
+        val prefix = this.urlPrefix ?: urlPrefix
+        val endpointBoxes = this.properties<Endpoint<*, *>>().map {
+            val (name, endpoint) = it
+            val url = endpoint.url ?: "/" + name
+            EndpointBox(endpoint, prefix + url, name)
+        }
+        val remoteEndpointBoxes = this.properties<Remote>().flatMap {
+            val (name, remote) = it
+            remote.buildEndpoints("$prefix/$name")
+        }
+        return endpointBoxes + remoteEndpointBoxes
+    }
+
+    private val endpoints: List<EndpointBox<*, *>> by lazy(mode = LazyThreadSafetyMode.NONE) {
+        buildEndpoints("").apply {
+            filter { !it.endpoint.isHandlerInitialized }
+                    .map { it.name }
+                    .joinToString(",")
+                    .apply {
+                        if (isNotEmpty()) {
+                            throw ConfigurationException("Handlers of follow endpoints are missing. - $this.")
+                        }
+                    }
+        }
     }
 
     fun processRequest(request: HttpServletRequest, response: HttpServletResponse): Boolean {
@@ -115,12 +132,15 @@ abstract class Remote {
     fun <R> get(url: String? = null): Producer<R> {
         return Producer(url, Method.GET);
     }
+
     fun <R> post(url: String? = null): Producer<R> {
         return Producer(url, Method.POST);
     }
+
     fun <R> put(url: String? = null): Producer<R> {
         return Producer(url, Method.PUT);
     }
+
     fun <R> delete(url: String? = null): Producer<R> {
         return Producer(url, Method.DELETE);
     }
