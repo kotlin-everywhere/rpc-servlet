@@ -18,18 +18,34 @@ infix fun Class<*>.isExtend(clazz: Class<*>): Boolean {
 }
 
 internal object RequestContext {
-    private val local = ThreadLocal<HttpServletRequest>();
+    class Context(var request: HttpServletRequest? = null, var global: Any? = null)
+
+    private val local = ThreadLocal<Context>();
+    private val context: Context
+        get() {
+            if (local.get() == null) {
+                local.set(Context())
+            }
+            return local.get()
+        }
+
     val request: HttpServletRequest
-        get() = local.get()
+        get() = context.request!!
 
     fun <T> with(request: HttpServletRequest, body: () -> T): T {
         try {
-            local.set(request)
+            context.request = request
             return body()
         } finally {
             local.remove()
         }
     }
+
+    var global: Any?
+        get() = context.global
+        set(value) {
+            context.global = value
+        }
 }
 
 abstract class Remote(val urlPrefix: String? = null) {
