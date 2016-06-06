@@ -1,11 +1,12 @@
 package com.github.kotlin_everywhere.rpc
 
+import com.google.gson.Gson
 import javax.servlet.http.HttpServletRequest
 
 abstract class Endpoint<P, R>(internal val url: String?, val method: Method,
                               protected val parameterClass: Class<P>) {
     protected lateinit var handler: (P) -> R
-    internal fun handle(request: HttpServletRequest): R {
+    internal fun handle(gson: Gson, request: HttpServletRequest): R {
         @Suppress("UNCHECKED_CAST")
         val param: P =
                 if (parameterClass == Unit::class.java) {

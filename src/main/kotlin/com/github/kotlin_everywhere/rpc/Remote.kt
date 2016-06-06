@@ -17,16 +17,31 @@ infix fun Class<*>.isExtend(clazz: Class<*>): Boolean {
     return clazz.isAssignableFrom(this)
 }
 
-val gson = GsonBuilder().create()
+internal object RequestContext {
+    private val local = ThreadLocal<HttpServletRequest>();
+    val request: HttpServletRequest
+        get() = local.get()
+
+    fun <T> with(request: HttpServletRequest, body: () -> T): T {
+        try {
+            local.set(request)
+            return body()
+        } finally {
+            local.remove()
+        }
+    }
+}
 
 abstract class Remote(val urlPrefix: String? = null) {
     val client: TestClient
         get() = TestClient(this)
 
+    internal val gson = GsonBuilder().create()
+
     fun serverClient(body: (TestServerClient) -> Unit) {
         runServer(port = 0) {
             val port = it.connectors.map { it as ServerConnector? }.filterNotNull().first().localPort
-            body(TestServerClient(port))
+            body(TestServerClient(this, port))
         }
     }
 
@@ -93,6 +108,10 @@ abstract class Remote(val urlPrefix: String? = null) {
     }
 
     fun processRequest(request: HttpServletRequest, response: HttpServletResponse): Boolean {
+        return RequestContext.with(request) { processRequestImpl(request, response) }
+    }
+
+    private fun processRequestImpl(request: HttpServletRequest, response: HttpServletResponse): Boolean {
         val requestMethod = request.method.toUpperCase()
         if (requestMethod == "OPTIONS") {
             val matched = endpoints.filter { it.url == request.requestURI }
@@ -119,7 +138,7 @@ abstract class Remote(val urlPrefix: String? = null) {
         response.setHeader("Content-Type", "application/json; charset=utf-8")
 
         val endpointBox = endpoints.find { it.url == request.requestURI && it.endpoint.method == method } ?: return false
-        val result = endpointBox.endpoint.handle(request)
+        val result = endpointBox.endpoint.handle(gson, request)
         if (result !== Unit) {
             gson.toJson(result, response.writer)
         }

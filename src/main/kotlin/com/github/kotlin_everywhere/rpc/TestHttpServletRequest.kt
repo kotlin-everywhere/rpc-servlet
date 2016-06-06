@@ -7,7 +7,9 @@ import java.util.*
 import javax.servlet.*
 import javax.servlet.http.*
 
-class TestHttpServletRequest(private val url: String, private val method: Method, val body: String? = null) : HttpServletRequest {
+class TestHttpServletRequest(private val url: String, private val method: Method,
+                             private val headers: Map<String, List<String>>,
+                             val body: String? = null) : HttpServletRequest {
     override fun isUserInRole(role: String?): Boolean {
         throw UnsupportedOperationException()
     }
@@ -80,6 +82,7 @@ class TestHttpServletRequest(private val url: String, private val method: Method
         throw UnsupportedOperationException()
     }
 
+    @Suppress("OverridingDeprecatedMember")
     override fun isRequestedSessionIdFromUrl(): Boolean {
         throw UnsupportedOperationException()
     }
@@ -117,7 +120,7 @@ class TestHttpServletRequest(private val url: String, private val method: Method
     }
 
     override fun getHeader(name: String?): String? {
-        throw UnsupportedOperationException()
+        return headers[name]?.firstOrNull()
     }
 
     override fun getIntHeader(name: String?): Int {
@@ -180,6 +183,7 @@ class TestHttpServletRequest(private val url: String, private val method: Method
         throw UnsupportedOperationException()
     }
 
+    @Suppress("OverridingDeprecatedMember")
     override fun getRealPath(path: String?): String? {
         throw UnsupportedOperationException()
     }

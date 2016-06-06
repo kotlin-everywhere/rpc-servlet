@@ -1,19 +1,20 @@
 package com.github.kotlin_everywhere.rpc
 
+import com.google.gson.Gson
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
-abstract class Client {
-    abstract fun get(url: String, data: Map<*, *>? = null): Response
-    abstract fun post(url: String, data: Map<*, *>? = null): Response
-    abstract fun put(url: String, data: Map<*, *>? = null): Response
-    abstract fun delete(url: String, data: Map<*, *>? = null): Response
+abstract class Client(protected val gson: Gson) {
+    abstract fun get(url: String, data: Map<*, *>? = null, headers: Map<String, List<String>> = mapOf()): Response
+    abstract fun post(url: String, data: Map<*, *>? = null, headers: Map<String, List<String>> = mapOf()): Response
+    abstract fun put(url: String, data: Map<*, *>? = null, headers: Map<String, List<String>> = mapOf()): Response
+    abstract fun delete(url: String, data: Map<*, *>? = null, headers: Map<String, List<String>> = mapOf()): Response
     protected fun buildUrl(url: String, data: Map<*, *>?) = "$url?data=${URLEncoder.encode(gson.toJson(data), "UTF-8")}"
 }
 
-abstract class Response {
+abstract class Response(protected val gson: Gson) {
     abstract val data: Map<String, Any?>
 
     inline fun <reified T : Any> returnValue(): T {
@@ -24,39 +25,39 @@ abstract class Response {
     abstract val headers: Map<String, List<String>>
 }
 
-class TestClient(private val remote: Remote) : Client() {
-    override fun delete(url: String, data: Map<*, *>?): Response {
-        return processRequest(data, url, Method.DELETE)
+class TestClient(private val remote: Remote) : Client(remote.gson) {
+    override fun delete(url: String, data: Map<*, *>?, headers: Map<String, List<String>>): Response {
+        return processRequest(data, url, Method.DELETE, headers)
     }
 
-    override fun post(url: String, data: Map<*, *>?): Response {
-        return processRequest(data, url, Method.POST)
+    override fun post(url: String, data: Map<*, *>?, headers: Map<String, List<String>>): Response {
+        return processRequest(data, url, Method.POST, headers)
     }
 
-    override fun put(url: String, data: Map<*, *>?): Response {
-        return processRequest(data, url, Method.PUT)
+    override fun put(url: String, data: Map<*, *>?, headers: Map<String, List<String>>): Response {
+        return processRequest(data, url, Method.PUT, headers)
     }
 
-    private fun processRequest(data: Map<*, *>?, url: String, method: Method): TestResponse {
+    private fun processRequest(data: Map<*, *>?, url: String, method: Method, headers: Map<String, List<String>>): TestResponse {
         val testHttpServletResponse = TestHttpServletResponse()
         remote.processRequest(
-                TestHttpServletRequest(url, method, gson.toJson(data)),
+                TestHttpServletRequest(url, method, headers, remote.gson.toJson(data)),
                 testHttpServletResponse
         )
-        return TestResponse(testHttpServletResponse)
+        return TestResponse(remote.gson, testHttpServletResponse)
     }
 
-    override fun get(url: String, data: Map<*, *>?): TestResponse {
+    override fun get(url: String, data: Map<*, *>?, headers: Map<String, List<String>>): Response {
         val testHttpServletResponse = TestHttpServletResponse()
         remote.processRequest(
-                TestHttpServletRequest(buildUrl(url, data), Method.GET),
+                TestHttpServletRequest(buildUrl(url, data), Method.GET, headers),
                 testHttpServletResponse
         )
-        return TestResponse(testHttpServletResponse)
+        return TestResponse(gson, testHttpServletResponse)
     }
 }
 
-class TestResponse(private val testHttpServletResponse: TestHttpServletResponse) : Response() {
+class TestResponse(gson: Gson, private val testHttpServletResponse: TestHttpServletResponse) : Response(gson) {
     @Suppress("UNCHECKED_CAST")
     override val data: Map<String, Any?> by lazy {
         gson.fromJson(responseBody, Any::class.java) as Map<String, Any?>
@@ -72,39 +73,41 @@ class TestResponse(private val testHttpServletResponse: TestHttpServletResponse)
     }
 }
 
-class TestServerClient(val port: Int) : Client() {
-    override fun post(url: String, data: Map<*, *>?): Response {
-        return processRequest(data, url, Method.POST)
+class TestServerClient(remote: Remote, val port: Int) : Client(remote.gson) {
+    override fun post(url: String, data: Map<*, *>?, headers: Map<String, List<String>>): Response {
+        return processRequest(data, url, Method.POST, headers)
     }
 
-    override fun put(url: String, data: Map<*, *>?): Response {
-        return processRequest(data, url, Method.PUT)
+    override fun put(url: String, data: Map<*, *>?, headers: Map<String, List<String>>): Response {
+        return processRequest(data, url, Method.PUT, headers)
     }
 
-    override fun delete(url: String, data: Map<*, *>?): Response {
-        return processRequest(data, url, Method.DELETE)
+    override fun delete(url: String, data: Map<*, *>?, headers: Map<String, List<String>>): Response {
+        return processRequest(data, url, Method.DELETE, headers)
     }
 
-    private fun processRequest(data: Map<*, *>?, url: String, method: Method): TestServerResponse {
+    private fun processRequest(data: Map<*, *>?, url: String, method: Method, headers: Map<String, List<String>>): TestServerResponse {
         val connection = (URL("http://localhost:$port$url").openConnection() as HttpURLConnection).apply {
             requestMethod = method.name
             doOutput = true
+            headers.forEach { headerFields[it.key] = it.value }
             outputStream.writer().apply {
                 gson.toJson(data, this)
                 flush()
                 close()
             }
         }
-        return TestServerResponse(connection)
+        return TestServerResponse(gson, connection)
     }
 
-    override fun get(url: String, data: Map<*, *>?): TestServerResponse {
+    override fun get(url: String, data: Map<*, *>?, headers: Map<String, List<String>>): Response {
         val connection = URL("http://localhost:$port" + buildUrl(url, data)).openConnection() as HttpURLConnection
-        return TestServerResponse(connection)
+        headers.forEach { connection.headerFields[it.key] = it.value }
+        return TestServerResponse(gson, connection)
     }
 }
 
-class TestServerResponse(private val connection: HttpURLConnection) : Response() {
+class TestServerResponse(gson: Gson, private val connection: HttpURLConnection) : Response(gson) {
     override val responseBody: String by lazy { InputStreamReader(connection.inputStream).readText() }
 
     override val headers: Map<String, List<String>> by lazy {
