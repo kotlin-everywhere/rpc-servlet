@@ -36,7 +36,13 @@ abstract class Remote(val urlPrefix: String? = null) {
     val client: TestClient
         get() = TestClient(this)
 
+    private val onBeforeHandlers = arrayListOf<() -> Unit>()
+
     internal val gson = GsonBuilder().create()
+
+    fun onBefore(handler: () -> Unit) {
+        onBeforeHandlers.add(handler)
+    }
 
     fun serverClient(body: (TestServerClient) -> Unit) {
         runServer(port = 0) {
@@ -65,7 +71,8 @@ abstract class Remote(val urlPrefix: String? = null) {
         }
     }
 
-    data class EndpointBox<P, R>(val endpoint: Endpoint<P, R>, val url: String, val name: String)
+    data class EndpointBox<P, R>(val endpoint: Endpoint<P, R>, val url: String, val name: String,
+                                 val remoteStack: List<Remote>)
 
     private inline fun <reified T : Any> Any.properties(): List<Pair<String, T>> {
         return this.javaClass.methods
@@ -80,22 +87,23 @@ abstract class Remote(val urlPrefix: String? = null) {
                 }
     }
 
-    private fun buildEndpoints(urlPrefix: String): List<EndpointBox<*, *>> {
+    private fun buildEndpoints(urlPrefix: String, parents: List<Remote>): List<EndpointBox<*, *>> {
         val prefix = this.urlPrefix ?: urlPrefix
+        val remoteStack = parents + this
         val endpointBoxes = this.properties<Endpoint<*, *>>().map {
             val (name, endpoint) = it
             val url = endpoint.url ?: "/" + name
-            EndpointBox(endpoint, prefix + url, name)
+            EndpointBox(endpoint, prefix + url, name, remoteStack)
         }
         val remoteEndpointBoxes = this.properties<Remote>().flatMap {
             val (name, remote) = it
-            remote.buildEndpoints("$prefix/$name")
+            remote.buildEndpoints("$prefix/$name", remoteStack)
         }
         return endpointBoxes + remoteEndpointBoxes
     }
 
     private val endpoints: List<EndpointBox<*, *>> by lazy(mode = LazyThreadSafetyMode.NONE) {
-        buildEndpoints("").apply {
+        buildEndpoints("", listOf()).apply {
             filter { !it.endpoint.isHandlerInitialized }
                     .map { it.name }
                     .joinToString(",")
@@ -138,6 +146,9 @@ abstract class Remote(val urlPrefix: String? = null) {
         response.setHeader("Content-Type", "application/json; charset=utf-8")
 
         val endpointBox = endpoints.find { it.url == request.requestURI && it.endpoint.method == method } ?: return false
+        endpointBox.remoteStack.forEach {
+            it.onBeforeHandlers.forEach { it() }
+        }
         val result = endpointBox.endpoint.handle(gson, request)
         if (result !== Unit) {
             gson.toJson(result, response.writer)
