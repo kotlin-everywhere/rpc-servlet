@@ -119,43 +119,54 @@ abstract class Remote(val urlPrefix: String? = null) {
         return RequestContext.with(request) { processRequestImpl(request, response) }
     }
 
-    private fun processRequestImpl(request: HttpServletRequest, response: HttpServletResponse): Boolean {
+    private data class ProcessResponse(val code: Int = 200, val headers: Map<String, String> = mapOf(), val data: Any)
+
+    private fun processRequestImpl(request: HttpServletRequest): ProcessResponse {
+        val matchedEndPoints = endpoints.filter { it.url == request.requestURI }
+        if (matchedEndPoints.isEmpty()) {
+            throw NotFound()
+        }
+
         val requestMethod = request.method.toUpperCase()
         if (requestMethod == "OPTIONS") {
-            val matched = endpoints.filter { it.url == request.requestURI }
-            if (matched.isEmpty()) {
-                return false
-            } else {
-                response.setHeader("Access-Control-Allow-Origin", "*")
-                response.setHeader(
-                        "Access-Control-Allow-Methods",
-                        (matched.map { it.endpoint.method.name } + "OPTIONS").joinToString(", ")
-                )
-                response.setHeader("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With")
-                return true
-            }
+            val headers = mapOf(
+                    "Access-Control-Allow-Methods" to
+                            (matchedEndPoints.map { it.endpoint.method.name } + "OPTIONS").joinToString(", "),
+                    "Access-Control-Allow-Headers" to "Content-Type, Accept, X-Requested-With"
+            )
+            return ProcessResponse(headers = headers, data = Unit)
         }
 
         val method: Method = try {
             Method.valueOf(requestMethod)
         } catch (e: IllegalArgumentException) {
-            return false
+            throw RemoteException(405, "Method Not Allowed")
         }
 
-        response.setHeader("Access-Control-Allow-Origin", "*")
-        response.setHeader("Content-Type", "application/json; charset=utf-8")
-
-        val endpointBox = endpoints.find { it.url == request.requestURI && it.endpoint.method == method } ?: return false
+        val endpointBox = endpoints.find { it.url == request.requestURI && it.endpoint.method == method } ?: throw NotFound()
         endpointBox.remoteStack.forEach {
             it.onBeforeHandlers.forEach { it() }
         }
-        val result = endpointBox.endpoint.handle(gson, request)
-        if (result !== Unit) {
-            gson.toJson(result, response.writer)
+        return ProcessResponse(data = endpointBox.endpoint.handle(gson, request) ?: Unit)
+    }
+
+    private fun processRequestImpl(request: HttpServletRequest, response: HttpServletResponse): Boolean {
+        val processResponse =
+                try {
+                    processRequestImpl(request)
+                } catch (e: RemoteException) {
+                    ProcessResponse(code = e.code, data = e.json())
+                }
+        response.status = processResponse.code
+        val headers = (
+                mapOf("Access-Control-Allow-Origin" to "*", "Content-Type" to "application/json; charset=utf-8") +
+                        processResponse.headers)
+        headers.forEach { response.setHeader(it.key, it.value) }
+        if (processResponse.data !== Unit) {
+            gson.toJson(processResponse.data, response.writer)
         }
         response.writer.flush()
         response.writer.close()
-
         return true
     }
 

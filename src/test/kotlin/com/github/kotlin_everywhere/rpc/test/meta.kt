@@ -14,7 +14,7 @@ class MetaTest {
             rpc.data?.accessToken
         }
 
-        Assert.assertEquals("null", rpc.remote.client.get("/showAccessToken").responseBody)
+        Assert.assertEquals("", rpc.remote.client.get("/showAccessToken").responseBody)
         Assert.assertEquals(
                 "message", rpc.remote.client.get("/showAccessToken",
                 headers = mapOf(X_RPC_META_DATA to listOf("""{"accessToken": "message"}"""))).returnValue<String>()

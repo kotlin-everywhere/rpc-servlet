@@ -9,6 +9,7 @@ import javax.servlet.http.HttpServletResponse
 
 @Suppress("OverridingDeprecatedMember")
 class TestHttpServletResponse : HttpServletResponse {
+    private var status: Int = 0
     override fun getWriter(): PrintWriter? {
         return _writer
     }
@@ -75,7 +76,7 @@ class TestHttpServletResponse : HttpServletResponse {
     }
 
     override fun setStatus(sc: Int) {
-        throw UnsupportedOperationException()
+        status = sc
     }
 
     override fun setStatus(sc: Int, sm: String?) {
