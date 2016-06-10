@@ -151,7 +151,7 @@ abstract class Remote(val urlPrefix: String? = null) {
             val headers = mapOf(
                     "Access-Control-Allow-Methods" to
                             (matchedEndPoints.map { it.endpoint.method.name } + "OPTIONS").joinToString(", "),
-                    "Access-Control-Allow-Headers" to "Content-Type, Accept, X-Requested-With"
+                    "Access-Control-Allow-Headers" to "Content-Type, Accept, X-Requested-With, $X_RPC_META_DATA"
             )
             return ProcessResponse(headers = headers, data = Unit)
         }
