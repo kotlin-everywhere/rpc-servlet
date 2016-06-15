@@ -7,17 +7,17 @@ import java.net.URL
 import java.net.URLEncoder
 
 abstract class Client(protected val gson: Gson) {
-    abstract fun get(url: String, data: Map<*, *>? = null, headers: Map<String, List<String>> = mapOf()): Response
-    abstract fun post(url: String, data: Map<*, *>? = null, headers: Map<String, List<String>> = mapOf()): Response
-    abstract fun put(url: String, data: Map<*, *>? = null, headers: Map<String, List<String>> = mapOf()): Response
-    abstract fun delete(url: String, data: Map<*, *>? = null, headers: Map<String, List<String>> = mapOf()): Response
-    protected fun buildUrl(url: String, data: Map<*, *>?) = "$url?data=${URLEncoder.encode(gson.toJson(data), "UTF-8")}"
+    abstract fun get(url: String, data: Any? = null, headers: Map<String, List<String>> = mapOf()): Response
+    abstract fun post(url: String, data: Any? = null, headers: Map<String, List<String>> = mapOf()): Response
+    abstract fun put(url: String, data: Any? = null, headers: Map<String, List<String>> = mapOf()): Response
+    abstract fun delete(url: String, data: Any? = null, headers: Map<String, List<String>> = mapOf()): Response
+    protected fun buildUrl(url: String, data: Any) = "$url?data=${URLEncoder.encode(gson.toJson(data), "UTF-8")}"
 }
 
 abstract class Response(protected val gson: Gson) {
     abstract val data: Map<String, Any?>
 
-    inline fun <reified T : Any> returnValue(): T {
+    inline fun <reified T : Any> result(): T {
         return gson.fromJson(responseBody, T::class.java)
     }
 
@@ -26,19 +26,19 @@ abstract class Response(protected val gson: Gson) {
 }
 
 class TestClient(private val remote: Remote) : Client(remote.gson) {
-    override fun delete(url: String, data: Map<*, *>?, headers: Map<String, List<String>>): Response {
+    override fun delete(url: String, data: Any?, headers: Map<String, List<String>>): Response {
         return processRequest(data, url, Method.DELETE, headers)
     }
 
-    override fun post(url: String, data: Map<*, *>?, headers: Map<String, List<String>>): Response {
+    override fun post(url: String, data: Any?, headers: Map<String, List<String>>): Response {
         return processRequest(data, url, Method.POST, headers)
     }
 
-    override fun put(url: String, data: Map<*, *>?, headers: Map<String, List<String>>): Response {
+    override fun put(url: String, data: Any?, headers: Map<String, List<String>>): Response {
         return processRequest(data, url, Method.PUT, headers)
     }
 
-    private fun processRequest(data: Map<*, *>?, url: String, method: Method, headers: Map<String, List<String>>): TestResponse {
+    private fun processRequest(data: Any?, url: String, method: Method, headers: Map<String, List<String>>): TestResponse {
         val testHttpServletResponse = TestHttpServletResponse()
         remote.processRequest(
                 TestHttpServletRequest(url, method, headers, remote.gson.toJson(data)),
@@ -47,10 +47,10 @@ class TestClient(private val remote: Remote) : Client(remote.gson) {
         return TestResponse(remote.gson, testHttpServletResponse)
     }
 
-    override fun get(url: String, data: Map<*, *>?, headers: Map<String, List<String>>): Response {
+    override fun get(url: String, data: Any?, headers: Map<String, List<String>>): Response {
         val testHttpServletResponse = TestHttpServletResponse()
         remote.processRequest(
-                TestHttpServletRequest(buildUrl(url, data), Method.GET, headers),
+                TestHttpServletRequest(data?.let { buildUrl(url, it) } ?: url, Method.GET, headers),
                 testHttpServletResponse
         )
         return TestResponse(gson, testHttpServletResponse)
@@ -74,19 +74,22 @@ class TestResponse(gson: Gson, private val testHttpServletResponse: TestHttpServ
 }
 
 class TestServerClient(remote: Remote, val port: Int) : Client(remote.gson) {
-    override fun post(url: String, data: Map<*, *>?, headers: Map<String, List<String>>): Response {
+    override fun post(url: String, data: Any?, headers: Map<String, List<String>>): Response {
         return processRequest(data, url, Method.POST, headers)
     }
 
-    override fun put(url: String, data: Map<*, *>?, headers: Map<String, List<String>>): Response {
+    override fun put(url: String, data: Any?, headers: Map<String, List<String>>): Response {
         return processRequest(data, url, Method.PUT, headers)
     }
 
-    override fun delete(url: String, data: Map<*, *>?, headers: Map<String, List<String>>): Response {
-        return processRequest(data, url, Method.DELETE, headers)
+    override fun delete(url: String, data: Any?, headers: Map<String, List<String>>): Response {
+        val connection = URL("http://localhost:$port" + (data?.let { buildUrl(url, it) } ?: url)).openConnection() as HttpURLConnection
+        connection.requestMethod = Method.DELETE.name
+        headers.forEach { connection.headerFields[it.key] = it.value }
+        return TestServerResponse(gson, connection)
     }
 
-    private fun processRequest(data: Map<*, *>?, url: String, method: Method, headers: Map<String, List<String>>): TestServerResponse {
+    private fun processRequest(data: Any?, url: String, method: Method, headers: Map<String, List<String>>): TestServerResponse {
         val connection = (URL("http://localhost:$port$url").openConnection() as HttpURLConnection).apply {
             requestMethod = method.name
             doOutput = true
@@ -100,8 +103,8 @@ class TestServerClient(remote: Remote, val port: Int) : Client(remote.gson) {
         return TestServerResponse(gson, connection)
     }
 
-    override fun get(url: String, data: Map<*, *>?, headers: Map<String, List<String>>): Response {
-        val connection = URL("http://localhost:$port" + buildUrl(url, data)).openConnection() as HttpURLConnection
+    override fun get(url: String, data: Any?, headers: Map<String, List<String>>): Response {
+        val connection = URL("http://localhost:$port" + (data?.let { buildUrl(url, it) } ?: url)).openConnection() as HttpURLConnection
         headers.forEach { connection.headerFields[it.key] = it.value }
         return TestServerResponse(gson, connection)
     }

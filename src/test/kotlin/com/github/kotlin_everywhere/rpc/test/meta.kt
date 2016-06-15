@@ -25,7 +25,7 @@ class MetaTest {
         Assert.assertEquals("", rpc.remote.client.get("/showAccessToken").responseBody)
         Assert.assertEquals(
                 "message", rpc.remote.client.get("/showAccessToken",
-                headers = mapOf(X_RPC_META_DATA to listOf("""{"accessToken": "message"}"""))).returnValue<String>()
+                headers = mapOf(X_RPC_META_DATA to listOf("""{"accessToken": "message"}"""))).result<String>()
         )
     }
 }
@@ -47,8 +47,8 @@ class RequestGlobalTest {
 
         rpc.remote.index { g().code }
 
-        Assert.assertEquals("N/A", rpc.remote.client.get("/").returnValue<String>())
-        Assert.assertEquals("10", rpc.remote.client.get("/", headers = mapOf(X_RPC_META_DATA to listOf("""{"code": 10}"""))).returnValue<String>())
+        Assert.assertEquals("N/A", rpc.remote.client.get("/").result<String>())
+        Assert.assertEquals("10", rpc.remote.client.get("/", headers = mapOf(X_RPC_META_DATA to listOf("""{"code": 10}"""))).result<String>())
     }
 }
 

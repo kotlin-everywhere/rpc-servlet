@@ -24,8 +24,8 @@ class ExceptionTest {
             throw Unauthorized()
         }
 
-        Assert.assertEquals(Ex(404, "Not Found"), a.client.get("/").returnValue<Ex>())
-        Assert.assertEquals(Ex(401, "Unauthorized"), a.client.get("/loginRequired").returnValue<Ex>())
-        Assert.assertEquals(Ex(500, "Internal Server Error"), a.client.get("/divisionByZero").returnValue<Ex>())
+        Assert.assertEquals(Ex(404, "Not Found"), a.client.get("/").result<Ex>())
+        Assert.assertEquals(Ex(401, "Unauthorized"), a.client.get("/loginRequired").result<Ex>())
+        Assert.assertEquals(Ex(500, "Internal Server Error"), a.client.get("/divisionByZero").result<Ex>())
     }
 }

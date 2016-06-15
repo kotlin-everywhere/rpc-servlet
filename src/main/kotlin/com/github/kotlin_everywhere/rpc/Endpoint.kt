@@ -14,8 +14,8 @@ abstract class Endpoint<P, R>(internal val url: String?, val method: Method,
                 } else {
                     gson.fromJson(
                             when (method) {
-                                Method.GET -> request.getParameter("data")
-                                Method.POST, Method.PUT, Method.DELETE -> request.reader.readText()
+                                Method.GET, Method.DELETE -> request.getParameter("data")
+                                Method.POST, Method.PUT -> request.reader.readText()
                             },
                             parameterClass
                     )

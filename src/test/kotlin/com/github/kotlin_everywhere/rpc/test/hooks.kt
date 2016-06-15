@@ -42,7 +42,7 @@ class HooksTest() {
             }
         }
 
-        assertArrayEquals(arrayOf("A", "B", "C"), a.client.get("/b/c/").returnValue<Array<String>>())
+        assertArrayEquals(arrayOf("A", "B", "C"), a.client.get("/b/c/").result<Array<String>>())
     }
 }
 

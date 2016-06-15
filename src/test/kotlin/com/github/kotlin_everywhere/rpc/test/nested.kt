@@ -23,12 +23,12 @@ class NestTest {
             }
         }
 
-        assertEquals("index", remote.client.get("/").returnValue<String>())
-        assertEquals("admin.index", remote.client.get("/admin/").returnValue<String>())
+        assertEquals("index", remote.client.get("/").result<String>())
+        assertEquals("admin.index", remote.client.get("/admin/").result<String>())
 
         remote.serverClient {
-            assertEquals("index", it.get("/").returnValue<String>())
-            assertEquals("admin.index", it.get("/admin/").returnValue<String>())
+            assertEquals("index", it.get("/").result<String>())
+            assertEquals("admin.index", it.get("/admin/").result<String>())
         }
     }
 
@@ -53,8 +53,8 @@ class NestTest {
             b.index { "b.index" }
             c.index { "c.index" }
         }
-        assertEquals("a.index", a.client.get("/").returnValue<String>())
-        assertEquals("b.index", a.client.get("/b/").returnValue<String>())
-        assertEquals("c.index", a.client.get("/c").returnValue<String>())
+        assertEquals("a.index", a.client.get("/").result<String>())
+        assertEquals("b.index", a.client.get("/b/").result<String>())
+        assertEquals("c.index", a.client.get("/c").result<String>())
     }
 }

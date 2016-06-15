@@ -116,9 +116,9 @@ class IntegrationTest {
 
     @Test
     fun testHangul() {
-        assertEquals("한글", remote.client.get("/hangul").returnValue<String>())
+        assertEquals("한글", remote.client.get("/hangul").result<String>())
         remote.serverClient {
-            assertEquals("한글", it.get("/hangul").returnValue<String>())
+            assertEquals("한글", it.get("/hangul").result<String>())
         }
     }
 
